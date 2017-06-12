@@ -1,0 +1,8 @@
+//
+// Created by luka on 11.06.17..
+//
+
+#ifndef PROJECT_MASS_CTL_ATTITUDE_MPC_H
+#define PROJECT_MASS_CTL_ATTITUDE_MPC_H
+
+#endif //PROJECT_MASS_CTL_ATTITUDE_MPC_H

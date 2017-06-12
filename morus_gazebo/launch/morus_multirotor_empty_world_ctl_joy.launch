@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
 
-
-
 <launch>
 
   <!-- these are the arguments you can pass this launch file, for example paused:=true -->
@@ -28,16 +26,16 @@
     <arg name="headless" value="$(arg headless)"/>
   </include>
 
+  <!-- create a multirotor in gazebo environment -->
   <include file="$(find morus_gazebo)/launch/spawn_morus_multirotor.launch" />
-  
+
   <!-- start control stack -->
   <include file="$(find morus_control)/launch/morus_control.launch"/>
 
   <!-- Here starts joystick -->
+<!--
   <include file="$(find morus_joy)/launch/morus_joy_teleop.launch">
     <arg name="joy_config" value="$(arg joy_config)" />
   </include>
-
+-->
 </launch>
-
-

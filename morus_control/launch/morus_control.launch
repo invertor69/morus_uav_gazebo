@@ -34,9 +34,10 @@
       <!--remap from="/joint_states" to="$(arg namespace)/joint_states"/-->
       <remap from="/robot_description" to="$(arg namespace)/robot_description"/>
     </node>
-  
+
     <node pkg="morus_control" type="mass_ctl_attitude.py" name="mass_ctl_attitude" output="screen"  ns="$(arg namespace)">
     </node>
+
   </group>
   
 

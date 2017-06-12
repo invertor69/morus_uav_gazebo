@@ -26,6 +26,7 @@
     <arg name="headless" value="$(arg headless)"/>
   </include>
 
+  <!-- create a multirotor in gazebo environment -->
   <include file="$(find morus_gazebo)/launch/spawn_morus_multirotor.launch" />
 
 </launch>
