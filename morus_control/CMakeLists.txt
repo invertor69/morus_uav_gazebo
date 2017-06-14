@@ -37,5 +37,5 @@ install(DIRECTORY config
 install(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-add_executable(mass_ctl_attitude_mpc_node src/nodes/mass_ctl_attitude_mpc_node.cpp)
+add_executable(mass_ctl_attitude_mpc_node src/nodes/mass_ctl_attitude_mpc_node.cpp src/mass_ctl_attitude_mpc.cpp)
 target_link_libraries(mass_ctl_attitude_mpc_node ${catkin_LIBRARIES})

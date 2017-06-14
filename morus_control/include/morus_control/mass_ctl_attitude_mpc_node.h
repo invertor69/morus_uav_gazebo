@@ -9,18 +9,26 @@
 #include "sensor_msgs/Imu.h"
 #include "rosgraph_msgs/Clock.h"
 
+#include "morus_control/mass_ctl_attitude_mpc.h"
+
 namespace mav_control_attitude {
     class MPCAttitudeControllerNode{
+
     public:
-        MPCAttitudeControllerNode(const ros::NodeHandle& nh, const ros::NodeHandle private_nh);
+        MPCAttitudeControllerNode(const ros::NodeHandle& nh, const ros::NodeHandle& private_nh);
         ~MPCAttitudeControllerNode();
         void Publish();
 
     private:
-        ros::NodeHandle nh_;
-        ros::NodeHandle private_nh_;
+        ros::NodeHandle nh_, private_nh_;
 
-        double count_;
+        MPCAttitudeController linear_mpc_;
+
+        // variables to hold the setpoints for the moving masses
+        double mass_0_reff_;
+        double mass_1_reff_;
+        double mass_2_reff_;
+        double mass_3_reff_;
         bool start_flag_;
 
         // publishers
@@ -31,7 +39,7 @@ namespace mav_control_attitude {
 
         // subscribers
         ros::Subscriber imu_;
-            void ahrs_cb        (const sensor_msgs::Imu& msg);
+            void AhrsCallback(const sensor_msgs::Imu& msg);
             struct euler_mv {
                 double x;
                 double y;
@@ -44,15 +52,15 @@ namespace mav_control_attitude {
             } euler_rate_mv_;
 
         ros::Subscriber mot_vel_ref_;
-            void mot_vel_ref_cb (const std_msgs::Float32& msg);
+            void MotVelRefCallback(const std_msgs::Float32& msg);
             float w_sp_;
 
         ros::Subscriber euler_ref_;
-            void euler_ref_cb   (const geometry_msgs::Vector3& msg);
+            void EulerRefCallback(const geometry_msgs::Vector3& msg);
             geometry_msgs::Vector3 euler_sp_;
 
         ros::Subscriber clock_;
-            void clock_cb       (const rosgraph_msgs::Clock& msg);
+            void ClockCallback(const rosgraph_msgs::Clock& msg);
             rosgraph_msgs::Clock clock_read_;
     };
 }
