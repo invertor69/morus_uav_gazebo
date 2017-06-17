@@ -7,18 +7,30 @@
 
 #include <cmath>
 
+#include <morus_control/steady_state_calculation.h>
+
 #include <ros/ros.h>
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Core>
-#include <eigen3/unsupported/Eigen/src/MatrixFunctions/MatrixExponential.h>
+#include <Eigen/Eigen>
+#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <unsupported/Eigen/src/MatrixFunctions/MatrixExponential.h>
 
 namespace mav_control_attitude {
     // constants
+    // CC_MPC
+    /*
     constexpr int kStateSize = 8;
     constexpr int kInputSize = 4;
-    //static constexpr int kMeasurementSize = 6;
+    constexpr int kMeasurementSize = 1;
+    constexpr int kDisturbanceSize = 2;
+    */
+
+    // MM_MPC
+    constexpr int kStateSize = 6;
+    constexpr int kInputSize = 2;
+    constexpr int kMeasurementSize = 1;
     constexpr int kDisturbanceSize = 1;
+
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
 

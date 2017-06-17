@@ -15,6 +15,10 @@
 
     <arg name="joy_config" default="attack3"/>
 
+    <!-- for gazebo not to crash -->
+    <!--
+    <node pkg="gazebo_ros" type="gzclient" name="gzclient"> </node>
+    -->
 
     <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -38,4 +42,7 @@
         <arg name="joy_config" value="$(arg joy_config)" />
       </include>
     -->
+
+    <!-- GUI for debuging and control -->
+    <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"> </node>
 </launch>
