@@ -26,6 +26,10 @@ endif()
 
 find_package(cmake_modules REQUIRED)
 
+# enable the use of Eigen
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIRS})
+
 catkin_package(
 )
 
