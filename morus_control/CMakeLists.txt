@@ -37,5 +37,11 @@ install(DIRECTORY config
 install(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-add_executable(mass_ctl_attitude_mpc_node src/nodes/mass_ctl_attitude_mpc_node.cpp src/mass_ctl_attitude_mpc.cpp)
+set(mass_ctl_attitude_mpc_node_SRCS
+        src/nodes/mass_ctl_attitude_mpc_node.cpp
+        # mass_ctl_attitude_mpc depends on steady_state_calculation
+        src/mass_ctl_attitude_mpc.cpp
+        src/steady_state_calculation.cpp)
+
+add_executable(mass_ctl_attitude_mpc_node ${mass_ctl_attitude_mpc_node_SRCS})
 target_link_libraries(mass_ctl_attitude_mpc_node ${catkin_LIBRARIES})
