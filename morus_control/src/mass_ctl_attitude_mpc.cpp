@@ -160,17 +160,15 @@ namespace mav_control_attitude {
         model_B_ = integral_exp_A * B_continous_time;
         model_Bd_ = integral_exp_A * Bd_continous_time;
 
-        // TODO init the solver and steady state calculation
-        //steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
+        steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
 
-        /*
         if (verbose_) {
-            ROS_INFO_STREAM("A: \n" << model_A_);
-            ROS_INFO_STREAM("B: \n" << model_B_);
+            ROS_INFO_STREAM("A:   \n" << model_A_);
+            ROS_INFO_STREAM("B:   \n" << model_B_);
             ROS_INFO_STREAM("B_d: \n" << model_Bd_);
         }
-        */
 
+        // TODO init the solver and impement the real regulator
         //Solver initialization
         //set_defaults();
         //setup_indexing();
