@@ -5,8 +5,11 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
     std_msgs
+    geometry_msgs
     rosgraph_msgs
     genmsg
+    control_msgs
+    sensor_msgs
 )
 
 # check c++11 / c++0x

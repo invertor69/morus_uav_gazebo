@@ -8,6 +8,7 @@
 #include "std_msgs/Float32.h"
 #include "sensor_msgs/Imu.h"
 #include "rosgraph_msgs/Clock.h"
+#include "control_msgs/JointControllerState.h" // for moving masses states
 
 #include "morus_control/mass_ctl_attitude_mpc.h"
 
@@ -62,6 +63,26 @@ namespace mav_control_attitude {
         ros::Subscriber clock_;
             void ClockCallback(const rosgraph_msgs::Clock& msg);
             rosgraph_msgs::Clock clock_read_;
+
+        ros::Subscriber movable_mass_0_state_sub_;
+            void MovingMass0Callback(const control_msgs::JointControllerState& msg);
+            double movable_mass_0_position_;
+            double movable_mass_0_speed_;
+
+        ros::Subscriber movable_mass_1_state_sub_;
+            void MovingMass1Callback(const control_msgs::JointControllerState& msg);
+            double movable_mass_1_position_;
+            double movable_mass_1_speed_;
+
+        ros::Subscriber movable_mass_2_state_sub_;
+            void MovingMass2Callback(const control_msgs::JointControllerState& msg);
+            double movable_mass_2_position_;
+            double movable_mass_2_speed_;
+
+        ros::Subscriber movable_mass_3_state_sub_;
+            void MovingMass3Callback(const control_msgs::JointControllerState& msg);
+            double movable_mass_3_position_;
+            double movable_mass_3_speed_;
     };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_NODE_H

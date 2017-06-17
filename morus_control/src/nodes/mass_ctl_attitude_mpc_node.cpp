@@ -5,7 +5,8 @@ namespace mav_control_attitude {
                                                          const ros::NodeHandle& private_nh)
             : nh_(nh),
               private_nh_(private_nh),
-              linear_mpc_(nh, private_nh)
+              linear_mpc_(nh, private_nh),
+              start_flag_(false)  // flag for the first measurement
     {
         // temp variables for the publishers
         mass_0_reff_ = 0.0;
@@ -13,7 +14,17 @@ namespace mav_control_attitude {
         mass_2_reff_ = -0.0;
         mass_3_reff_ = 0.0;
 
-        start_flag_ = false;            // flag indicates if the first measurement is received
+        // init the readings od moving mass sensors
+        movable_mass_0_position_ = 0.0;
+        movable_mass_1_position_ = 0.0;
+        movable_mass_2_position_ = 0.0;
+        movable_mass_3_position_ = 0.0;
+        movable_mass_0_speed_ = 0.0;
+        movable_mass_1_speed_ = 0.0;
+        movable_mass_2_speed_ = 0.0;
+        movable_mass_3_speed_ = 0.0;
+
+        linear_mpc_.apllyParameters(); // aplly after the dynamic change! // TODO
 
         // Publishers  ( nh -> )
         pub_mass0_ = nh_.advertise<std_msgs::Float64>("movable_mass_0_position_controller/command", 1);
@@ -26,6 +37,15 @@ namespace mav_control_attitude {
         mot_vel_ref_ = nh_.subscribe("mot_vel_ref", 1, &MPCAttitudeControllerNode::MotVelRefCallback, this);
         euler_ref_ = nh_.subscribe("euler_ref", 1, &MPCAttitudeControllerNode::EulerRefCallback, this); // reference for the angles
         clock_ = nh_.subscribe("/clock", 1, &MPCAttitudeControllerNode::ClockCallback, this);  // internal clock variable
+        // position of mass 0
+        movable_mass_0_state_sub_= nh_.subscribe("movable_mass_0_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass0Callback, this);
+        // position of mass 1
+        movable_mass_1_state_sub_= nh_.subscribe("movable_mass_1_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass1Callback, this);
+        // position of mass 2
+        movable_mass_2_state_sub_= nh_.subscribe("movable_mass_2_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass2Callback, this);
+        // position of mass 3
+        movable_mass_3_state_sub_= nh_.subscribe("movable_mass_3_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass3Callback, this);
+
     }
 
     MPCAttitudeControllerNode::~MPCAttitudeControllerNode() {
@@ -102,9 +122,29 @@ namespace mav_control_attitude {
         euler_sp_ = msg;
     }
 
-    void MPCAttitudeControllerNode::ClockCallback(const rosgraph_msgs::Clock& msg) {
+    void MPCAttitudeControllerNode::ClockCallback(const rosgraph_msgs::Clock &msg) {
         /// @param msg
         clock_read_ = msg;
+    }
+
+    void MPCAttitudeControllerNode::MovingMass0Callback(const control_msgs::JointControllerState& msg) {
+      movable_mass_0_position_ = msg.process_value;
+      movable_mass_0_speed_ = msg.process_value_dot;
+    }
+
+    void MPCAttitudeControllerNode::MovingMass1Callback(const control_msgs::JointControllerState& msg) {
+      movable_mass_1_position_ = msg.process_value;
+      movable_mass_1_speed_ = msg.process_value_dot;
+    }
+
+    void MPCAttitudeControllerNode::MovingMass2Callback(const control_msgs::JointControllerState& msg) {
+      movable_mass_2_position_ = msg.process_value;
+      movable_mass_2_speed_ = msg.process_value_dot;
+    }
+
+    void MPCAttitudeControllerNode::MovingMass3Callback(const control_msgs::JointControllerState& msg) {
+      movable_mass_3_position_ = msg.process_value;
+      movable_mass_3_speed_ = msg.process_value_dot;
     }
 }
 
