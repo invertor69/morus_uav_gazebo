@@ -89,17 +89,77 @@ namespace mav_control_attitude {
         euler_rate_mv_.z = sx / cy * q + cx / cy * r;
 
         // Calculation of the output
-        // input variables "euler_mv_" and "euler_rate_mv_"
+        // input variables "euler_mv_"(angle) and "euler_rate_mv_"(angular velocity)
+
+        Eigen::Matrix<double, kStateSize, 1> target_state;
+        Eigen::Matrix<double, kStateSize, 1> current_state;
+        ROS_INFO_STREAM("angles: \n roll: " << euler_mv_.x <<
+                                "\n pitch: " << euler_mv_.y <<
+                                "\n jaw: " << euler_mv_.z);
+        // roll
+        target_state(0,0) = 0.0;
+        target_state(1,0) = 0.0;
+        target_state(2,0) = 0.0;
+        target_state(3,0) = 0.0;
+        target_state(4,0) = euler_sp_.x;
+        target_state(5,0) = 0.0;
+
+        current_state(0,0) = movable_mass_0_position_;
+        current_state(1,0) = movable_mass_0_speed_;
+        current_state(2,0) = movable_mass_2_position_;
+        current_state(3,0) = movable_mass_2_speed_;
+        current_state(4,0) = euler_mv_.x;
+        current_state(5,0) = euler_rate_mv_.x;
+
+        mass_x_commands = linear_mpc_.LQR_K_ * (target_state - current_state);
+        // min limits
+        Eigen::Vector2d lower_limits_roll;
+        lower_limits_roll << -0.29, -0.29;
+        mass_x_commands = mass_x_commands.cwiseMax(lower_limits_roll);
+        // max limits
+        Eigen::Vector2d upper_limits_roll;
+        upper_limits_roll << 0.29, 0.29;
+        mass_x_commands = mass_x_commands.cwiseMin(upper_limits_roll);
+        mass_0_reff_ = mass_x_commands(0);
+        mass_2_reff_ = mass_x_commands(1);
+
+        // pitch
+        target_state(0,0) = 0.0;
+        target_state(1,0) = 0.0;
+        target_state(2,0) = 0.0;
+        target_state(3,0) = 0.0;
+        target_state(4,0) = euler_sp_.y;
+        target_state(5,0) = 0.0;
+
+        current_state(0,0) = movable_mass_1_position_;
+        current_state(1,0) = movable_mass_1_speed_;
+        current_state(2,0) = movable_mass_3_position_;
+        current_state(3,0) = movable_mass_3_speed_;
+        current_state(4,0) = euler_mv_.y;
+        current_state(5,0) = euler_rate_mv_.y;
+
+        mass_y_commands = linear_mpc_.LQR_K_ * (target_state - current_state);
+        // min limits
+        Eigen::Vector2d lower_limits_pitch;
+        lower_limits_pitch << -0.29, -0.29;
+        mass_y_commands = mass_y_commands.cwiseMax(lower_limits_pitch);
+        // max limits
+        Eigen::Vector2d upper_limits_pitch;
+        upper_limits_pitch << 0.29, 0.29;
+        mass_y_commands = mass_y_commands.cwiseMin(upper_limits_pitch);
+        mass_1_reff_ = mass_y_commands(0);
+        mass_3_reff_ = mass_y_commands(1);
+
+        // TODO calculate the feedback and form the selected structure !!!! line 114 in "linear_mpc_node.cpp"
+
         // TODO calculate the outputs for the masses using the current "euler_mv_" and "euler_rate_mv_"
-        // TODO init the parameters of the model (A, B, C)
-        // TODO discretize and prepare for the solver
         // TODO init the solver
         // TODO express the outputs
 
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
         mass0_command_msg.data = mass_0_reff_;
-        mass2_command_msg.data = -mass_1_reff_;
-        mass1_command_msg.data = -mass_2_reff_;
+        mass1_command_msg.data = -mass_1_reff_;
+        mass2_command_msg.data = -mass_2_reff_;
         mass3_command_msg.data = mass_3_reff_;
 
         // publish the new references for the masses

@@ -29,14 +29,20 @@ namespace mav_control_attitude {
 
 
 class MPCAttitudeController {
-    public:
+ public:
     MPCAttitudeController(const ros::NodeHandle& nh, const ros::NodeHandle& private_nh);
     ~MPCAttitudeController();
 
+    // After dynamic change update the parameters
+    void apllyParameters();
+
+    // backup LQR
+    Eigen::MatrixXd LQR_K_; // TODO return to private once !!
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    private:
 
+ private:
     // ros node handles
     ros::NodeHandle nh_, private_nh_;
 
@@ -82,6 +88,38 @@ class MPCAttitudeController {
     double zeta_mm_;
     double tm_;
     double w_mm_;
+
+    // steady state calculation
+    SteadyStateCalculation steady_state_calculation_;
+
+    // controller parameters
+      // CC_MPC
+      /*
+      // state penalty
+      Eigen::Vector3d q_position_;
+      Eigen::Vector3d q_velocity_;
+
+      Eigen::Vector4d q_moving_masses_;
+      Eigen::Vector2d q_IC_motors_;
+      Eigen::Vector2d q_attitude_;
+
+      // control penalty
+      Eigen::Vector4d r_command_; // u
+      Eigen::Vector4d r_delta_command_; // du
+      */
+
+      // MM_MPC
+      // state penalty
+      Eigen::Vector4d q_moving_masses_;
+      Eigen::Vector2d q_attitude_;
+
+      // control penalty
+      Eigen::Vector2d r_command_;
+      Eigen::Vector2d r_delta_command_;
+
+    // debug info
+    bool verbose_;
+    double solve_time_average_;
 };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_H

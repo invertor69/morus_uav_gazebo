@@ -30,6 +30,8 @@ namespace mav_control_attitude {
         double mass_1_reff_;
         double mass_2_reff_;
         double mass_3_reff_;
+        Eigen::Matrix<double, 2, 1> mass_x_commands;
+        Eigen::Matrix<double, 2, 1> mass_y_commands;
         bool start_flag_;
 
         // publishers
