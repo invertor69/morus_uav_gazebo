@@ -23,7 +23,7 @@ namespace mav_control_attitude {
               */
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(2.0, 0.0),
+              q_attitude_(1.0, 0.0),
               r_command_(1.0, 1.0),
               r_delta_command_(1.0, 1.0)
     {
@@ -67,8 +67,15 @@ namespace mav_control_attitude {
         w_gm_0_ = sqrt(M_ * kGravity / 4.0 / b_gm_f_);
         F0_ = b_gm_f_ * pow(w_gm_0_,2);
 
+        // true parameters experimental
+        /*
         zeta_mm_ = 0.6551;
         w_mm_ = 14.8508;
+        */
+
+        // parameters gotten from simulation
+        zeta_mm_ = 0.5755;
+        w_mm_ = 5.8205;
 
         // construct model matrices
         Eigen::MatrixXd A_continous_time(kStateSize, kStateSize);
@@ -112,11 +119,11 @@ namespace mav_control_attitude {
         Bd_continous_time(7, 1) = 1.0;
          */
 
-        // IC_MPC // TODO init do kraja od IC_MPC-a !!!!
+        // MM_MPC //
         // states: (x)
         // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
         // input signals: (u)
-        // ['x1_ref (m)'; 'x3_ref (m)'] -> B is [6,2]
+        // [x1_ref (m), x3_ref (m)] -> B is [6,2]
         A_continous_time(0,1) = 1.0;
         A_continous_time(1,0) = -pow(w_mm_,2);
         A_continous_time(1,1) = -2.0*zeta_mm_*w_mm_;
@@ -124,19 +131,19 @@ namespace mav_control_attitude {
         A_continous_time(3,2) = -pow(w_mm_,2);
         A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
         A_continous_time(4,5) = 1.0;
-        A_continous_time(5,0) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        //A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,1) = 2.0 * mass_*(1.0-mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
-        A_continous_time(5,2) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        //A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,3) = 2.0 *mass_*(1.0-mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+        //A_continous_time(5,0) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
+        A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
+        A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+        //A_continous_time(5,2) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
+        A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
+        A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
 
         B_continous_time(1,0) = pow(w_mm_,2);
         B_continous_time(3,1) = pow(w_mm_,2);
-        B_continous_time(5,0) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        B_continous_time(5,1) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        //B_continous_time(5,0) = -2.0 * mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        //B_continous_time(5,1) = -2.0 * mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
+        //B_continous_time(5,0) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
+        //B_continous_time(5,1) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
+        B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
+        B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
         // disturbance on angle and angular speed [theta, dtheta] -> B_d is [6,1]
         Bd_continous_time(4, 0) = 1.0;
@@ -262,14 +269,14 @@ namespace mav_control_attitude {
       if (verbose_) {
         ROS_INFO_STREAM("diag(Q) = \n" << Q.diagonal().transpose());
         ROS_INFO_STREAM("diag(R) = \n" << R.diagonal().transpose());
-        ROS_INFO_STREAM("diag(R_delta) = \n " << R_delta.diagonal().transpose());
+        ROS_INFO_STREAM("diag(R_delta) = \n " << R_delta.diagonal());
 
         ROS_INFO_STREAM("Q_final (terminal cost) = \n" << Q_final);
         ROS_INFO_STREAM("LQR_K_ = \n" << LQR_K_);
       }
     }
 
-    void MPCAttitudeController::calculateMovingMasses() {
-
+    void MPCAttitudeController::calculateMovingMassesCommand(Eigen::Vector4d* moving_mass_ref) {
+      *moving_mass_ref << 0.0, 0.0, 0.0, 0.0;
     }
 }
