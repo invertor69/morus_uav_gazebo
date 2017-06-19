@@ -18,7 +18,7 @@ namespace mav_control_attitude {
     class MPCAttitudeControllerNode{
 
     public:
-        MPCAttitudeControllerNode();
+        MPCAttitudeControllerNode(const ros::NodeHandle& nh, const ros::NodeHandle& private_nh);
         ~MPCAttitudeControllerNode();
         void Publish();
         void run();

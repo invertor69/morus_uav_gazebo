@@ -1,14 +1,14 @@
 #include <morus_control/mass_ctl_attitude_mpc_node.h>
 
 namespace mav_control_attitude {
-    MPCAttitudeControllerNode::MPCAttitudeControllerNode()
-            : private_nh_("~"),
+    MPCAttitudeControllerNode::MPCAttitudeControllerNode(const ros::NodeHandle& nh,
+                                                         const ros::NodeHandle& private_nh)
+            : nh_(nh),
+              private_nh_(private_nh),
               linear_mpc_(nh_, private_nh_),
               start_flag_(false),  // flag for the first measurement
               verbose_(false)
     {
-        //private_nh_ = ros::NodeHandle("~");
-        //linear_mpc_ = new MPCAttitudeController(nh_, private_nh_);
 
         // temp variables for the publishers
         mass_0_reff_ = 0.0;
@@ -253,7 +253,10 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "mav_attitude_ctl_mpc");
 
-    mav_control_attitude::MPCAttitudeControllerNode MPC_attitude_controller_node;
+    // fully initialize the node
+    ros::NodeHandle nh, private_nh("~");
+
+    mav_control_attitude::MPCAttitudeControllerNode MPC_attitude_controller_node(nh, private_nh);
 
     MPC_attitude_controller_node.run();
 
