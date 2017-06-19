@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(morus_msgs)
 
-find_package(catkin REQUIRED message_generation std_msgs dynamic_reconfigure)
+find_package(catkin REQUIRED
+        message_generation
+        std_msgs
+        dynamic_reconfigure
+        gencpp
+        roscpp
+        rospy)
 
 add_message_files(
   FILES
   MotorSpeed.msg
   PIDController.msg
+  CommandMovingMasses.msg
+  AngleAndAngularVelocity.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs)

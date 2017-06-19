@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     genmsg
     control_msgs
     sensor_msgs
+    morus_msgs
 )
 
 # check c++11 / c++0x
