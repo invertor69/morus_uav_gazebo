@@ -10,6 +10,7 @@
   	<remap from="imu" to="ahrs" />
   </node>
 
+  <!-- Height controller -->
   <node pkg="morus_control" type="height_yaw_ctl.py" name="height_ctl" output="screen"  ns="$(arg namespace)">
         <param name="gm_attitude_ctl" value="0"/>
   </node>
@@ -35,6 +36,7 @@
       <remap from="/robot_description" to="$(arg namespace)/robot_description"/>
     </node>
 
+    <!-- Attitude controller -->
     <node pkg="morus_control" type="mass_ctl_attitude.py" name="mass_ctl_attitude" output="screen"  ns="$(arg namespace)">
     </node>
 

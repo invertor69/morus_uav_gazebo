@@ -5,9 +5,8 @@
 #ifndef PROJECT_MASS_CTL_ATTITUDE_MPC_H
 #define PROJECT_MASS_CTL_ATTITUDE_MPC_H
 
-#include <cmath>
-
 #include <morus_control/steady_state_calculation.h>
+#include "math.h"
 
 #include <ros/ros.h>
 #include <Eigen/Eigen>
@@ -47,6 +46,9 @@ class MPCAttitudeController {
 
     // After dynamic change update the parameters
     void apllyParameters();
+
+    // compute control input
+    void calculateMovingMassesCommand(Eigen::Vector4d* moving_mass_ref);
 
     // backup LQR
     Eigen::MatrixXd LQR_K_; // TODO return to private once !!
