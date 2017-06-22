@@ -75,7 +75,7 @@ class SteadyStateCalculation
   bool initialized_params_; // flag to indicate ih the params have been initialized
   Eigen::Matrix<double, kStateSize, kDisturbanceSize> Bd_;
   Eigen::Matrix<double, kStateSize + kInputSize, kStateSize + kMeasurementSize> pseudo_inverse_left_hand_side_;
-  bool verbose_; // debuging variable
+  bool verbose_; // debugging variable
 
 };
 

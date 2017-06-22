@@ -109,30 +109,7 @@ namespace mav_control_attitude {
           pub_angle_state_.publish(angles_velocities);
         }
 
-
         // Calculation of the output
-        // input variables "euler_mv_"(angle) and "euler_rate_mv_"(angular velocity)
-
-        Eigen::Matrix<double, kStateSize, 1> target_state;
-        Eigen::Matrix<double, kStateSize, 1> current_state;
-
-        /*
-        // roll
-        // creating the "target_state" and "current_state" variables
-        target_state(0,0) = 0.0;
-        target_state(1,0) = 0.0;
-        target_state(2,0) = 0.0;
-        target_state(3,0) = 0.0;
-        target_state(4,0) = euler_sp_.x;
-        target_state(5,0) = 0.0;
-
-        current_state(0,0) = movable_mass_1_position_;
-        current_state(1,0) = movable_mass_1_speed_;
-        current_state(2,0) = movable_mass_3_position_;
-        current_state(3,0) = movable_mass_3_speed_;
-        current_state(4,0) = euler_mv_.x;
-        current_state(5,0) = euler_rate_mv_.x;
-         */
 
         // set the data to the controllers
         linear_mpc_roll_.setAngleState(euler_mv_.x);
@@ -144,29 +121,6 @@ namespace mav_control_attitude {
         calculateMovingMassesCommand(&mass_x_commands, &linear_mpc_roll_);
         calculateMovingMassesCommand(&mass_y_commands, &linear_mpc_pitch_);
 
-        /*
-        // pitch
-        target_state(0,0) = 0.0;
-        target_state(1,0) = 0.0;
-        target_state(2,0) = 0.0;
-        target_state(3,0) = 0.0;
-        target_state(4,0) = euler_sp_.y;
-        target_state(5,0) = 0.0;
-
-        current_state(0,0) = movable_mass_0_position_;
-        current_state(1,0) = movable_mass_0_speed_;
-        current_state(2,0) = movable_mass_2_position_;
-        current_state(3,0) = movable_mass_2_speed_;
-        current_state(4,0) = euler_mv_.y;
-        current_state(5,0) = euler_rate_mv_.y;
-        */
-
-
-
-        // TODO calculate the feedback and form the selected structure !!!! line 114 in "linear_mpc_node.cpp"
-
-        // TODO calculate the outputs for the masses using the current "euler_mv_" and "euler_rate_mv_"
-        // TODO init the solver
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
         mass0_command_msg.data =  mass_y_commands(0);
         mass1_command_msg.data = -mass_x_commands(0);

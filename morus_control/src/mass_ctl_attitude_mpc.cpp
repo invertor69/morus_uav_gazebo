@@ -297,6 +297,8 @@ namespace mav_control_attitude {
       //linear_mpc_.calculateSteadyStateLQR(&target_state);
       //Eigen::Matrix<double, kMeasurementSize, 1> ref_x;
       //Eigen::Matrix<double, kMeasurementSize, 1> ref_y;
+      // TODO init the solver and implement the MPC
+      // TODO implement the Kalman filter for disturbance states
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
 
@@ -318,11 +320,14 @@ namespace mav_control_attitude {
       error_states = target_state - current_state;
 
       Eigen::Vector2d moving_mass_ref_temp;
+
       moving_mass_ref_temp = LQR_K_ * error_states;
+
       // min limits
       Eigen::Vector2d lower_limits_roll;
       lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
       moving_mass_ref_temp = moving_mass_ref_temp.cwiseMax(lower_limits_roll);
+
       // max limits
       Eigen::Vector2d upper_limits_roll;
       upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
