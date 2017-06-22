@@ -60,7 +60,7 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
 
   Bd_ = Bd;
   Eigen::MatrixXd C(kMeasurementSize, kStateSize);
-  C.setIdentity();
+  C(0,4) = 1.0; // measured only the angle
 
   left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, C, Eigen::MatrixXd::Zero(
       kMeasurementSize, kInputSize);
@@ -77,7 +77,7 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
 }
 
 void SteadyStateCalculation::computeSteadyState(
-    const Eigen::Matrix<double, kDisturbanceSize, 1> &estimated_disturbance,  // TODO this vector is denpendent on kDisturbanceSize !!!!
+    const Eigen::Matrix<double, kDisturbanceSize, 1> &estimated_disturbance,
     const Eigen::Matrix<double, kMeasurementSize, 1> &reference,
     Eigen::Matrix<double, kStateSize, 1>* steadystate_state,
     Eigen::Matrix<double, kInputSize, 1>* steadystate_input)

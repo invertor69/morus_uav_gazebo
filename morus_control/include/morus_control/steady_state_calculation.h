@@ -49,10 +49,11 @@ class SteadyStateCalculation
   static constexpr int kDisturbanceSize = 2;
   */
   // MM_MPC
-  static constexpr int kStateSize = 6;
-  static constexpr int kInputSize = 2;
-  static constexpr int kMeasurementSize = 1;
-  static constexpr int kDisturbanceSize = 1;
+  static constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
+  static constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
+  static constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
+  static constexpr int kDisturbanceSize = 1; // [theta] -> B_d is [6,1]
+
   typedef const Eigen::Matrix<double, kDisturbanceSize, 1> EstimatedDisturbanceVector;
   typedef const Eigen::Matrix<double, kMeasurementSize, 1> ReferenceVector;
 
@@ -68,9 +69,10 @@ class SteadyStateCalculation
                           Eigen::Matrix<double, kInputSize, 1>* steadystate_input);
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
  private:
   ros::NodeHandle nh_, private_nh_, controller_nh_;
-  bool initialized_params_;
+  bool initialized_params_; // flag to indicate ih the params have been initialized
   Eigen::Matrix<double, kStateSize, kDisturbanceSize> Bd_;
   Eigen::Matrix<double, kStateSize + kInputSize, kStateSize + kMeasurementSize> pseudo_inverse_left_hand_side_;
   bool verbose_; // debuging variable

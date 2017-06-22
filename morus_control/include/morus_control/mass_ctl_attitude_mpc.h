@@ -7,11 +7,15 @@
 
 #include <morus_control/steady_state_calculation.h>
 #include "math.h"
+#include "geometry_msgs/Vector3.h"
+#include "rosgraph_msgs/Clock.h"
+#include "control_msgs/JointControllerState.h"
 
 #include <ros/ros.h>
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 #include <Eigen/Core>
+#include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/src/MatrixFunctions/MatrixExponential.h>
 
 namespace mav_control_attitude {
@@ -25,10 +29,10 @@ namespace mav_control_attitude {
     */
 
     // MM_MPC
-    constexpr int kStateSize = 6;
-    constexpr int kInputSize = 2;
-    constexpr int kMeasurementSize = 1;
-    constexpr int kDisturbanceSize = 1;
+    constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
+    constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
+    constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
+    constexpr int kDisturbanceSize = 1; // [theta] -> B_d is [6,1]
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
@@ -45,16 +49,57 @@ class MPCAttitudeController {
     ~MPCAttitudeController();
 
     // After dynamic change update the parameters
-    void apllyParameters();
+    void applyParameters();
 
     // compute control input
-    void calculateMovingMassesCommand(Eigen::Vector4d* moving_mass_ref);
+    void calculateMovingMassesCommand(Eigen::Vector2d* moving_mass_ref);
+
+    // setters
+    void setAngleRef(double angle_sp)
+    {
+      angle_sp_ = angle_sp;
+    }
+
+    void setClock(rosgraph_msgs::Clock clock)
+    {
+      clock_read_ = clock;
+    }
+
+    void setMovingMassState(control_msgs::JointControllerState msg, int number_moving_mass)
+    {
+      switch(number_moving_mass){
+        case 0 : movable_mass_0_position_ = msg.process_value;
+                 movable_mass_0_speed_ = msg.process_value_dot;
+                 break;
+        case 1 : movable_mass_1_position_ = msg.process_value;
+                 movable_mass_1_speed_ = msg.process_value_dot;
+                 break;
+      }
+    }
+
+    void setAngleState(double angle)
+    {
+      angle_ = angle;
+    }
+
+    void setAngularVelocityState(double angular_velocity)
+    {
+      angular_velocity_ = angular_velocity;
+    }
+
+
+    // getters
+    void getLQR_K(Eigen::MatrixXd& LQR_K)
+    {
+      LQR_K = LQR_K_;
+    } // TODO look where to use
+
+    void calculateSteadyStateLQR(Eigen::Matrix<double, kStateSize, 1>* target_state);
 
     // backup LQR
     Eigen::MatrixXd LQR_K_; // TODO return to private once !!
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
 
  private:
     // ros node handles
@@ -63,6 +108,16 @@ class MPCAttitudeController {
     //initialize system
     void initializeSystem();
     bool initialized_parameters_;
+
+    // controller variables
+    double angle_sp_;
+    rosgraph_msgs::Clock clock_read_;
+    double movable_mass_0_position_;
+    double movable_mass_0_speed_;
+    double movable_mass_1_position_;
+    double movable_mass_1_speed_;
+    double angle_;
+    double angular_velocity_;
 
     // system model
     // Model: A, B, Bd

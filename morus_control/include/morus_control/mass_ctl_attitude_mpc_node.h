@@ -25,27 +25,23 @@ namespace mav_control_attitude {
     private:
         ros::NodeHandle nh_, private_nh_;
 
-        MPCAttitudeController linear_mpc_;
+        MPCAttitudeController linear_mpc_roll_, linear_mpc_pitch_;
 
         // calculation of the future input signals
-        virtual bool calculateMovingMassesCommand(morus_msgs::CommandMovingMasses* moving_masses_command);
-
-        // variables to hold the setpoints for the moving masses
-        double mass_0_reff_;
-        double mass_1_reff_;
-        double mass_2_reff_;
-        double mass_3_reff_;
-        Eigen::Matrix<double, 2, 1> mass_x_commands;
-        Eigen::Matrix<double, 2, 1> mass_y_commands;
-        bool start_flag_;
+        virtual bool calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
+                                                  MPCAttitudeController* linear_mpc_commanded_angle);
 
         // publishers
         ros::Publisher pub_mass0_;
         ros::Publisher pub_mass1_;
         ros::Publisher pub_mass2_;
         ros::Publisher pub_mass3_;
-
+        // debugging publisher
         ros::Publisher pub_angle_state_;
+        // variables to hold the setpoints for the moving masses
+        Eigen::Matrix<double, 2, 1> mass_x_commands;
+        Eigen::Matrix<double, 2, 1> mass_y_commands;
+        bool start_flag_;
 
         // subscribers
         ros::Subscriber imu_subscriber_;

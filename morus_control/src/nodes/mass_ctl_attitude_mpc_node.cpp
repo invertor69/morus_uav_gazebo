@@ -5,16 +5,11 @@ namespace mav_control_attitude {
                                                          const ros::NodeHandle& private_nh)
             : nh_(nh),
               private_nh_(private_nh),
-              linear_mpc_(nh_, private_nh_),
+              linear_mpc_roll_(nh_, private_nh_),
+              linear_mpc_pitch_(nh_, private_nh_),
               start_flag_(false),  // flag for the first measurement
               verbose_(false)
     {
-
-        // temp variables for the publishers
-        mass_0_reff_ = 0.0;
-        mass_1_reff_ = -0.0;
-        mass_2_reff_ = -0.0;
-        mass_3_reff_ = 0.0;
 
         // init the readings od moving mass sensors
         movable_mass_0_position_ = 0.0;
@@ -30,7 +25,8 @@ namespace mav_control_attitude {
         euler_sp_.y = 0.0;
         euler_sp_.z = 0.0;
 
-        linear_mpc_.apllyParameters(); // aplly after the dynamic change! // TODO
+        linear_mpc_roll_.applyParameters(); // aplly after the dynamic change! // TODO
+        linear_mpc_pitch_.applyParameters();
 
         // Publishers  ( nh -> )
         pub_mass0_ = nh_.advertise<std_msgs::Float64>("movable_mass_0_position_controller/command", 1);
@@ -97,22 +93,22 @@ namespace mav_control_attitude {
 
         // publish to check if calculation
         if (verbose_) {
-            ROS_INFO_STREAM("angles: \n roll: " << euler_mv_.x <<
-                                   "\n pitch: " << euler_mv_.y <<
-                                     "\n jaw: " << euler_mv_.z);
+          ROS_INFO_STREAM("angles: \n roll: " << euler_mv_.x <<
+                                 "\n pitch: " << euler_mv_.y <<
+                                   "\n jaw: " << euler_mv_.z);
+          morus_msgs::AngleAndAngularVelocity angles_velocities;
+          angles_velocities.roll = (float)  euler_mv_.x;
+          angles_velocities.pitch = (float) euler_mv_.y;
+          angles_velocities.jaw = (float)   euler_mv_.z;
+
+          angles_velocities.roll_dot = (float)  euler_rate_mv_.x;
+          angles_velocities.pitch_dot = (float) euler_rate_mv_.y;
+          angles_velocities.jaw_dot = (float)   euler_rate_mv_.z;
+          angles_velocities.header.stamp = ros::Time::now();
+
+          pub_angle_state_.publish(angles_velocities);
         }
 
-        morus_msgs::AngleAndAngularVelocity angles_velocities;
-        angles_velocities.roll = (float)  euler_mv_.x;
-        angles_velocities.pitch = (float) euler_mv_.y;
-        angles_velocities.jaw = (float)   euler_mv_.z;
-
-        angles_velocities.roll_dot = (float)  euler_rate_mv_.x;
-        angles_velocities.pitch_dot = (float) euler_rate_mv_.y;
-        angles_velocities.jaw_dot = (float)   euler_rate_mv_.z;
-        angles_velocities.header.stamp = ros::Time::now();
-
-        pub_angle_state_.publish(angles_velocities);
 
         // Calculation of the output
         // input variables "euler_mv_"(angle) and "euler_rate_mv_"(angular velocity)
@@ -120,7 +116,9 @@ namespace mav_control_attitude {
         Eigen::Matrix<double, kStateSize, 1> target_state;
         Eigen::Matrix<double, kStateSize, 1> current_state;
 
+        /*
         // roll
+        // creating the "target_state" and "current_state" variables
         target_state(0,0) = 0.0;
         target_state(1,0) = 0.0;
         target_state(2,0) = 0.0;
@@ -134,19 +132,19 @@ namespace mav_control_attitude {
         current_state(3,0) = movable_mass_3_speed_;
         current_state(4,0) = euler_mv_.x;
         current_state(5,0) = euler_rate_mv_.x;
+         */
 
-        mass_x_commands = linear_mpc_.LQR_K_ * (target_state - current_state);
-        // min limits
-        Eigen::Vector2d lower_limits_roll;
-        lower_limits_roll << -0.29, -0.29;
-        mass_x_commands = mass_x_commands.cwiseMax(lower_limits_roll);
-        // max limits
-        Eigen::Vector2d upper_limits_roll;
-        upper_limits_roll << 0.29, 0.29;
-        mass_x_commands = mass_x_commands.cwiseMin(upper_limits_roll);
-        mass_1_reff_ = mass_x_commands(0);
-        mass_3_reff_ = mass_x_commands(1);
+        // set the data to the controllers
+        linear_mpc_roll_.setAngleState(euler_mv_.x);
+        linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
+        linear_mpc_pitch_.setAngleState(euler_mv_.y);
+        linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
 
+        // calculate the control signals - MAIN ALGORITHM !!!!!
+        calculateMovingMassesCommand(&mass_x_commands, &linear_mpc_roll_);
+        calculateMovingMassesCommand(&mass_y_commands, &linear_mpc_pitch_);
+
+        /*
         // pitch
         target_state(0,0) = 0.0;
         target_state(1,0) = 0.0;
@@ -161,29 +159,19 @@ namespace mav_control_attitude {
         current_state(3,0) = movable_mass_2_speed_;
         current_state(4,0) = euler_mv_.y;
         current_state(5,0) = euler_rate_mv_.y;
+        */
 
-        mass_y_commands = linear_mpc_.LQR_K_ * (target_state - current_state);
-        // min limits
-        Eigen::Vector2d lower_limits_pitch;
-        lower_limits_pitch << -0.29, -0.29;
-        mass_y_commands = mass_y_commands.cwiseMax(lower_limits_pitch);
-        // max limits
-        Eigen::Vector2d upper_limits_pitch;
-        upper_limits_pitch << 0.29, 0.29;
-        mass_y_commands = mass_y_commands.cwiseMin(upper_limits_pitch);
-        mass_0_reff_ = mass_y_commands(0);
-        mass_2_reff_ = mass_y_commands(1);
+
 
         // TODO calculate the feedback and form the selected structure !!!! line 114 in "linear_mpc_node.cpp"
 
         // TODO calculate the outputs for the masses using the current "euler_mv_" and "euler_rate_mv_"
         // TODO init the solver
-        // TODO express the outputs
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
-        mass0_command_msg.data = mass_0_reff_;
-        mass1_command_msg.data = -mass_1_reff_;
-        mass2_command_msg.data = -mass_2_reff_;
-        mass3_command_msg.data = mass_3_reff_;
+        mass0_command_msg.data =  mass_y_commands(0);
+        mass1_command_msg.data = -mass_x_commands(0);
+        mass2_command_msg.data = -mass_y_commands(1);
+        mass3_command_msg.data =  mass_x_commands(1);
 
         // publish the new references for the masses
         pub_mass0_.publish(mass0_command_msg);
@@ -203,44 +191,51 @@ namespace mav_control_attitude {
         /// @details Euler ref values callback.
         /// @param msg: Type geometry_msgs::Vector3 (x-roll, y-pitch, z-yaw)
         euler_sp_ = msg;
+        linear_mpc_roll_.setAngleRef(msg.x);
+        linear_mpc_pitch_.setAngleRef(msg.y);
     }
 
     void MPCAttitudeControllerNode::ClockCallback(const rosgraph_msgs::Clock &msg) {
         /// @param msg
         clock_read_ = msg;
+        linear_mpc_roll_.setClock(msg);
+        linear_mpc_pitch_.setClock(msg);
     }
 
     void MPCAttitudeControllerNode::MovingMass0Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_0_position_ = msg.process_value;
       movable_mass_0_speed_ = msg.process_value_dot;
+      linear_mpc_pitch_.setMovingMassState(msg, 0);
     }
 
     void MPCAttitudeControllerNode::MovingMass1Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_1_position_ = msg.process_value;
       movable_mass_1_speed_ = msg.process_value_dot;
+      linear_mpc_roll_.setMovingMassState(msg, 0);
     }
 
     void MPCAttitudeControllerNode::MovingMass2Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_2_position_ = msg.process_value;
       movable_mass_2_speed_ = msg.process_value_dot;
+      linear_mpc_roll_.setMovingMassState(msg, 1);
     }
 
     void MPCAttitudeControllerNode::MovingMass3Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_3_position_ = msg.process_value;
       movable_mass_3_speed_ = msg.process_value_dot;
+      linear_mpc_pitch_.setMovingMassState(msg, 1);
     }
 
-    bool MPCAttitudeControllerNode::calculateMovingMassesCommand(morus_msgs::CommandMovingMasses* moving_masses_command) {
-      Eigen::Vector4d moving_mass_ref;
-      linear_mpc_.calculateMovingMassesCommand(&moving_mass_ref);
-      moving_masses_command->moving_mass_0_setpoint = (float)moving_mass_ref(0);
-      moving_masses_command->moving_mass_1_setpoint = (float)moving_mass_ref(1);
-      moving_masses_command->moving_mass_2_setpoint = (float)moving_mass_ref(2);
-      moving_masses_command->moving_mass_3_setpoint = (float)moving_mass_ref(3);
+    bool MPCAttitudeControllerNode::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
+                                                                 MPCAttitudeController* linear_mpc_commanded_angle) {
+      Eigen::Matrix<double, 2, 1> moving_mass_ref;
+      (*linear_mpc_commanded_angle).calculateMovingMassesCommand(&moving_mass_ref);
+      *moving_masses_command = moving_mass_ref;
       return true;
     }
 
     void MPCAttitudeControllerNode::run() {
+      // define sampling time
       ros::Rate loop_rate(100); // 100 Hz -> Ts = 0.01 s
       while (ros::ok()){
         ros::spinOnce();
