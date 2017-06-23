@@ -39,8 +39,8 @@ namespace mav_control_attitude {
         // debugging publisher
         ros::Publisher pub_angle_state_;
         // variables to hold the setpoints for the moving masses
-        Eigen::Matrix<double, 2, 1> mass_x_commands;
-        Eigen::Matrix<double, 2, 1> mass_y_commands;
+        Eigen::Matrix<double, 2, 1> mass_roll_commands_;
+        Eigen::Matrix<double, 2, 1> mass_pitch_commands_;
         bool start_flag_;
 
         // subscribers

@@ -25,8 +25,11 @@ namespace mav_control_attitude {
         euler_sp_.y = 0.0;
         euler_sp_.z = 0.0;
 
-        linear_mpc_roll_.applyParameters(); // aplly after the dynamic change! // TODO
+        linear_mpc_roll_.applyParameters();
+        linear_mpc_roll_.setControllerName("Roll controller");
+
         linear_mpc_pitch_.applyParameters();
+        linear_mpc_pitch_.setControllerName("Pitch controller");
 
         // Publishers  ( nh -> )
         pub_mass0_ = nh_.advertise<std_msgs::Float64>("movable_mass_0_position_controller/command", 1);
@@ -114,18 +117,19 @@ namespace mav_control_attitude {
         // set the data to the controllers
         linear_mpc_roll_.setAngleState(euler_mv_.x);
         linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
+
         linear_mpc_pitch_.setAngleState(euler_mv_.y);
         linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
 
         // calculate the control signals - MAIN ALGORITHM !!!!!
-        calculateMovingMassesCommand(&mass_x_commands, &linear_mpc_roll_);
-        calculateMovingMassesCommand(&mass_y_commands, &linear_mpc_pitch_);
+        calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
+        calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
 
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
-        mass0_command_msg.data =  mass_y_commands(0);
-        mass1_command_msg.data = -mass_x_commands(0);
-        mass2_command_msg.data = -mass_y_commands(1);
-        mass3_command_msg.data =  mass_x_commands(1);
+        mass0_command_msg.data =  mass_pitch_commands_(0);
+        mass1_command_msg.data = -mass_roll_commands_(0);
+        mass2_command_msg.data = -mass_pitch_commands_(1);
+        mass3_command_msg.data =  mass_roll_commands_(1);
 
         // publish the new references for the masses
         pub_mass0_.publish(mass0_command_msg);
@@ -171,13 +175,13 @@ namespace mav_control_attitude {
     void MPCAttitudeControllerNode::MovingMass2Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_2_position_ = msg.process_value;
       movable_mass_2_speed_ = msg.process_value_dot;
-      linear_mpc_roll_.setMovingMassState(msg, 1);
+      linear_mpc_pitch_.setMovingMassState(msg, 1);
     }
 
     void MPCAttitudeControllerNode::MovingMass3Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_3_position_ = msg.process_value;
       movable_mass_3_speed_ = msg.process_value_dot;
-      linear_mpc_pitch_.setMovingMassState(msg, 1);
+      linear_mpc_roll_.setMovingMassState(msg, 1);
     }
 
     bool MPCAttitudeControllerNode::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
