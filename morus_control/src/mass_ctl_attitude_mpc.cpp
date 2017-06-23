@@ -11,6 +11,11 @@ namespace mav_control_attitude {
             : nh_(nh),
               private_nh_(private_nh),
               initialized_parameters_(false),  // after call of the "initializedSystem" it gets to "true"
+              initialized_observer_(false),
+              enable_integrator_(true),
+              enable_offset_free_(true),
+              angle_error_integration_(0.0),
+              disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
               verbose_(true),
               // CC_MPC
@@ -27,11 +32,15 @@ namespace mav_control_attitude {
               r_command_(1.0, 1.0),
               r_delta_command_(1.0, 1.0)
     {
-        initializeSystem(); // init the system and its parameters
+      initializeSystem(); // init the system and its parameters
     }
 
     MPCAttitudeController::~MPCAttitudeController() { }
 
+/**
+    Set the matrices of the system dynamics model_A, model_B and model_Bd
+    Initialize the "steady_state_calculation" and "disturbance_observer_" TODO
+ */
     void MPCAttitudeController::initializeSystem() {
         mass_ = 1.0;
         mass_quad_ = 30.8;
@@ -169,6 +178,7 @@ namespace mav_control_attitude {
         model_Bd_ = integral_exp_A * Bd_continous_time;
 
         steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
+        angle_error_integration_.setZero();
 
         if (verbose_) {
             ROS_INFO_STREAM("A:   \n" << model_A_);
@@ -282,25 +292,71 @@ namespace mav_control_attitude {
       }
     }
 
-    void MPCAttitudeController::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_mass_ref) {
-      /*
-        Eigen::Matrix<double, kMeasurementSize, 1> estimated_disturbances;
-        estimated_disturbances.setZero();
-        // change the estimated_disturbances
-        steady_state_calculation_.computeSteadyState(estimated_disturbances, ref_x,
-                                                    &target_state, &target_input);
-        */
-      /*
-        steady_state_calculation_.computeSteadyState(Eigen::MatrixXd::Zero(kMeasurementSize, 1), ref_y,
-                                                     &target_state, &target_input);
-        */
-      //linear_mpc_.calculateSteadyStateLQR(&target_state);
-      //Eigen::Matrix<double, kMeasurementSize, 1> ref_x;
-      //Eigen::Matrix<double, kMeasurementSize, 1> ref_y;
+    void MPCAttitudeController::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_mass_ref)
+    {
+      assert(moving_mass_ref != nullptr);
+      assert(initialized_parameters_);
+
+      //Declare variables
+      Eigen::VectorXd KF_estimated_state;
+
+      // Kalman filter and disturbance observer
+      if (!initialized_observer_){
+        disturbance_observer_.reset();
+        disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
+                                              movable_mass_1_position_, movable_mass_1_speed_,
+                                              angle_, angular_velocity_);
+        disturbance_observer_.setSystemMatrices(model_A_, model_B_, model_Bd_);
+        initialized_observer_ = true;
+      }
+
+      disturbance_observer_.setMeasuredStates(movable_mass_0_position_, movable_mass_0_speed_,
+                                              movable_mass_1_position_, movable_mass_1_speed_,
+                                              angle_, angular_velocity_);
+      disturbance_observer_.setMovingMassCommand(moving_mass_ref_temp_);
+
+      bool observer_update_successful = disturbance_observer_.updateEstimator();
+
+      if (!observer_update_successful){
+        disturbance_observer_.reset();
+        disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
+                                              movable_mass_1_position_, movable_mass_1_speed_,
+                                              angle_, angular_velocity_);
+      }
+
+      disturbance_observer_.getEstimatedState(&KF_estimated_state);
+
+      if (enable_offset_free_) {
+        estimated_disturbances_ = KF_estimated_state.segment(6, kDisturbanceSize);
+      } else {
+        estimated_disturbances_.setZero();
+      }
+
+      // feedback integration
+      if(enable_integrator_){
+        Eigen::Matrix<double, kMeasurementSize, 1> angle_error;
+        double antiwindup_ball = 2.0; // TODO magic numbers
+
+        angle_error(0) = angle_sp_ - angle_;
+        // discrete integrator
+        if (angle_error.norm() < antiwindup_ball) {
+          angle_error_integration_ += angle_error * sampling_time_;
+        } else {
+          angle_error_integration_.setZero();
+        }
+
+        Eigen::Matrix<double, kMeasurementSize, 1> integration_limits;
+        integration_limits(0) = 1.2; // TODO magic numbers
+        angle_error_integration_ = angle_error_integration_.cwiseMax(-integration_limits);
+        angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
+
+        estimated_disturbances_ -= 1.5 * angle_error_integration_; // TODO magic number gain
+      };
+
       // TODO init the solver and implement the MPC
-      // TODO implement the Kalman filter for disturbance states
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
+      Eigen::Matrix<double, kInputSize, 1> target_input;
 
       // creating the "target_state" and "current_state" variables
       target_state(0,0) = 0.0;
@@ -317,27 +373,28 @@ namespace mav_control_attitude {
       current_state(4,0) = angle_;
       current_state(5,0) = angular_velocity_;
 
+      // experimental
+      Eigen::Matrix<double, kMeasurementSize, 1> ref;
+      ref(0) = angle_sp_;
+      steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
+                                                   &target_state, &target_input);
+
+      if (!getControllerName().compare("Roll controller")){
+        ROS_INFO_STREAM("target_states = \n" << target_state);
+      }
       error_states = target_state - current_state;
 
-      Eigen::Vector2d moving_mass_ref_temp;
-
-      moving_mass_ref_temp = LQR_K_ * error_states;
+      moving_mass_ref_temp_ = LQR_K_ * error_states; // + 0.5*Eigen::Vector2d(1,1)*angle_error_integration_; // feedback law for LQR
 
       // min limits
       Eigen::Vector2d lower_limits_roll;
       lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
-      moving_mass_ref_temp = moving_mass_ref_temp.cwiseMax(lower_limits_roll);
+      moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMax(lower_limits_roll);
 
       // max limits
       Eigen::Vector2d upper_limits_roll;
       upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
-      moving_mass_ref_temp = moving_mass_ref_temp.cwiseMin(upper_limits_roll);
-      *moving_mass_ref = moving_mass_ref_temp;
-    }
-
-    void MPCAttitudeController::calculateSteadyStateLQR(Eigen::Matrix<double, kStateSize, 1>* target_state) {
-      *target_state = (model_B_*LQR_K_).inverse()
-          * (Eigen::MatrixXd::Identity(kStateSize, kStateSize) - model_A_ + (model_B_*LQR_K_))
-          * (*target_state);  // TODO look if it will be used ? :/ not able !!!!
+      moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMin(upper_limits_roll);
+      *moving_mass_ref = moving_mass_ref_temp_;
     }
 }

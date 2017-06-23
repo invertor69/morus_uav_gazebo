@@ -49,7 +49,7 @@ set(mass_ctl_attitude_mpc_node_SRCS
         src/nodes/mass_ctl_attitude_mpc_node.cpp
         # mass_ctl_attitude_mpc depends on steady_state_calculation
         src/mass_ctl_attitude_mpc.cpp
-        src/steady_state_calculation.cpp)
+        src/steady_state_calculation.cpp src/KFDisturbanceObserver.cpp include/morus_control/KFDisturbanceObserver.h)
 
-add_executable(mass_ctl_attitude_mpc_node ${mass_ctl_attitude_mpc_node_SRCS})
+add_executable(mass_ctl_attitude_mpc_node ${mass_ctl_attitude_mpc_node_SRCS} src/KFDisturbanceObserver.cpp include/morus_control/KFDisturbanceObserver.h)
 target_link_libraries(mass_ctl_attitude_mpc_node ${catkin_LIBRARIES})

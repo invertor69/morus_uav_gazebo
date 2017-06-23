@@ -60,11 +60,11 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
 
   Bd_ = Bd;
   Eigen::MatrixXd C(kMeasurementSize, kStateSize);
+  C.setZero();
   C(0,4) = 1.0; // measured only the angle
 
   left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, C, Eigen::MatrixXd::Zero(
       kMeasurementSize, kInputSize);
-
   pseudo_inverse_left_hand_side_ = (left_hand_side.transpose() * left_hand_side).inverse()
       * left_hand_side.transpose();
 
@@ -93,8 +93,10 @@ void SteadyStateCalculation::computeSteadyState(
 
   target_state_and_input = pseudo_inverse_left_hand_side_ * right_hand_side;
 
-  *steadystate_state = target_state_and_input.segment(0, kStateSize);
-  *steadystate_input = target_state_and_input.segment(kStateSize, kInputSize);
+  if (target_state_and_input.allFinite()){
+    *steadystate_state = target_state_and_input.segment(0, kStateSize);
+    *steadystate_input = target_state_and_input.segment(kStateSize, kInputSize);
+  }
 }
 
 }

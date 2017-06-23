@@ -5,6 +5,7 @@
 #ifndef PROJECT_MASS_CTL_ATTITUDE_MPC_H
 #define PROJECT_MASS_CTL_ATTITUDE_MPC_H
 
+#include <morus_control/KFDisturbanceObserver.h>
 #include <morus_control/steady_state_calculation.h>
 #include "math.h"
 #include "geometry_msgs/Vector3.h"
@@ -33,6 +34,9 @@ namespace mav_control_attitude {
     constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
     constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
     constexpr int kDisturbanceSize = 1; // [theta] -> B_d is [6,1]
+
+    constexpr int kStateSizeKalman = 7;
+    constexpr int kMeasurementSizeKalman = 6;
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
@@ -87,17 +91,17 @@ class MPCAttitudeController {
       angular_velocity_ = angular_velocity;
     }
 
+    void setControllerName(std::string controller_name)
+    {
+      controller_name_ = controller_name;
+    }
+
 
     // getters
-    void getLQR_K(Eigen::MatrixXd& LQR_K)
+    std::string getControllerName()
     {
-      LQR_K = LQR_K_;
-    } // TODO look where to use
-
-    void calculateSteadyStateLQR(Eigen::Matrix<double, kStateSize, 1>* target_state);
-
-    // backup LQR
-    Eigen::MatrixXd LQR_K_; // TODO return to private once !!
+      return controller_name_;
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -112,12 +116,16 @@ class MPCAttitudeController {
     // controller variables
     double angle_sp_;
     rosgraph_msgs::Clock clock_read_;
+    // states of the system
     double movable_mass_0_position_;
     double movable_mass_0_speed_;
     double movable_mass_1_position_;
     double movable_mass_1_speed_;
     double angle_;
     double angular_velocity_;
+
+    // name
+    std::string controller_name_;
 
     // system model
     // Model: A, B, Bd
@@ -189,6 +197,18 @@ class MPCAttitudeController {
     // debug info
     bool verbose_;
     double solve_time_average_;
+
+    // backup LQR
+    Eigen::MatrixXd LQR_K_;
+    Eigen::Vector2d moving_mass_ref_temp_;
+
+    // disturbance observer
+    bool enable_offset_free_;
+    bool enable_integrator_;
+    bool initialized_observer_;
+    Eigen::Matrix<double, kMeasurementSize, 1> angle_error_integration_;
+    Eigen::Matrix<double, kDisturbanceSize, 1> estimated_disturbances_;
+    KFDisturbanceObserver disturbance_observer_;
 };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_H
