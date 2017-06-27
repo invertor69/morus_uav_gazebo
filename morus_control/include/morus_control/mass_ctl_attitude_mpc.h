@@ -11,6 +11,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "rosgraph_msgs/Clock.h"
 #include "control_msgs/JointControllerState.h"
+#include "std_msgs/Float64MultiArray.h"
 
 #include <ros/ros.h>
 #include <Eigen/Eigen>
@@ -33,7 +34,7 @@ namespace mav_control_attitude {
     constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
     constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
     constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-    constexpr int kDisturbanceSize = 1; // [theta] -> B_d is [6,1]
+    constexpr int kDisturbanceSize = 6; // [theta, dtheta] -> B_d is [6,2]
 
     constexpr int kStateSizeKalman = 7;
     constexpr int kMeasurementSizeKalman = 6;
@@ -110,6 +111,11 @@ class MPCAttitudeController {
  private:
     // ros node handles
     ros::NodeHandle nh_, private_nh_;
+
+    // publishers for debugging
+    ros::Publisher target_state_pub_;
+    ros::Publisher target_input_pub_;
+    ros::Publisher disturbances_pub_;
 
     //initialize system
     void initializeSystem();

@@ -17,7 +17,7 @@ namespace mav_control_attitude {
               angle_error_integration_(0.0),
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
-              verbose_(true),
+              verbose_(false),
               // CC_MPC
               /*
               q_moving_masses_(1, 1, 1, 1),
@@ -28,11 +28,16 @@ namespace mav_control_attitude {
               */
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(3.0, 0.0),
+              q_attitude_(8.0, 0.0),
               r_command_(1.0, 1.0),
-              r_delta_command_(1.0, 1.0)
+              r_delta_command_(0.1, 0.1)
     {
-      initializeSystem(); // init the system and its parameters
+     initializeSystem(); // init the system and its parameters
+
+     // debugging publishers
+     target_state_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_states/", 1);
+     target_input_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_input/", 1);
+     disturbances_pub_ =  nh_.advertise<std_msgs::Float64MultiArray>("mpc/disturbances/", 1);
     }
 
     MPCAttitudeController::~MPCAttitudeController() { }
@@ -141,11 +146,11 @@ namespace mav_control_attitude {
         A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
         A_continous_time(4,5) = 1.0;
         //A_continous_time(5,0) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+        A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
+        A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
         //A_continous_time(5,2) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+        A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
+        A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
 
         B_continous_time(1,0) = pow(w_mm_,2);
         B_continous_time(3,1) = pow(w_mm_,2);
@@ -154,9 +159,11 @@ namespace mav_control_attitude {
         B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
         B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
-        // disturbance on angle and angular speed [dtheta] -> B_d is [6,1]
+        // disturbance on angle and angular speed [theta, dtheta] -> B_d is [6,2]
         // introduces Moment of disturbance to be estimated
-        Bd_continous_time(5,0) = 1.0;
+        //Bd_continous_time(4,0) = 1.0;
+        //Bd_continous_time(5,1) = 1.0;
+        Bd_continous_time.setIdentity();
 
         // discretization of matrix A
         model_A_ = (prediction_sampling_time_ * A_continous_time).exp();
@@ -327,7 +334,11 @@ namespace mav_control_attitude {
       disturbance_observer_.getEstimatedState(&KF_estimated_state);
 
       if (enable_offset_free_) {
-        estimated_disturbances_ = KF_estimated_state.segment(6, kDisturbanceSize);
+        estimated_disturbances_ = KF_estimated_state.segment(kStateSize, kDisturbanceSize);
+        if (!getControllerName().compare("Roll controller") && verbose_){
+          ROS_INFO_STREAM("estimated disturbances: \n" << estimated_disturbances_);
+        }
+
       } else {
         estimated_disturbances_.setZero();
       }
@@ -375,16 +386,48 @@ namespace mav_control_attitude {
 
       // experimental
       Eigen::Matrix<double, kMeasurementSize, 1> ref;
-      ref(0) = angle_sp_;
-      steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
-                                                   &target_state, &target_input);
+      ref << angle_sp_;
+      if (enable_offset_free_){
+        steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
+                                                    &target_state, &target_input);
+        if (!getControllerName().compare("Roll controller")){
+          // publish target_state
+          std_msgs::Float64MultiArray target_state_msg;
+          target_state_msg.data.clear();
+          for (int index = 0; index < kStateSize; ++index) {
+            target_state_msg.data.push_back(target_state(index));
+          }
+          target_state_pub_.publish(target_state_msg);
 
-      if (!getControllerName().compare("Roll controller")){
+          // publish target_input
+          std_msgs::Float64MultiArray target_input_msg;
+          target_input_msg.data.clear();
+          for (int index = 0; index < kInputSize; ++index) {
+            target_input_msg.data.push_back(target_input(index));
+          }
+          target_input_pub_.publish(target_input_msg);
+
+          // publish disturbances
+          std_msgs::Float64MultiArray disturbances_msg;
+          disturbances_msg.data.clear();
+          for (int index = 0; index < kDisturbanceSize; ++index) {
+            disturbances_msg.data.push_back(estimated_disturbances_(index));
+          }
+          disturbances_pub_.publish(disturbances_msg);
+        }
+      }
+
+      if (!getControllerName().compare("Roll controller") && verbose_){
         ROS_INFO_STREAM("target_states = \n" << target_state);
       }
       error_states = target_state - current_state;
 
-      moving_mass_ref_temp_ = LQR_K_ * error_states; // + 0.5*Eigen::Vector2d(1,1)*angle_error_integration_; // feedback law for LQR
+      Eigen::Matrix<double, 2,1> K_I;
+      K_I(0) = 2.5; // TODO magic number to look at, integrator constant
+      K_I(1) = 2.5;
+
+      // CALCULATING FEEDBACK WITH LQR !!!!!!
+      moving_mass_ref_temp_ = -LQR_K_ * current_state + K_I * angle_error_integration_;
 
       // min limits
       Eigen::Vector2d lower_limits_roll;
