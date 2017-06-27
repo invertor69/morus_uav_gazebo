@@ -69,14 +69,16 @@ class MPCAttitudeController {
       clock_read_ = clock;
     }
 
-    void setMovingMassState(control_msgs::JointControllerState msg, int number_moving_mass)
+    void setMovingMassState(control_msgs::JointControllerState msg,
+                            int number_moving_mass,
+                            double gain_reading)
     {
       switch(number_moving_mass){
-        case 0 : movable_mass_0_position_ = msg.process_value;
-                 movable_mass_0_speed_ = msg.process_value_dot;
+        case 0 : movable_mass_0_position_ = gain_reading * msg.process_value;
+                 movable_mass_0_speed_ =    gain_reading * msg.process_value_dot;
                  break;
-        case 1 : movable_mass_1_position_ = msg.process_value;
-                 movable_mass_1_speed_ = msg.process_value_dot;
+        case 1 : movable_mass_1_position_ = gain_reading * msg.process_value;
+                 movable_mass_1_speed_ =    gain_reading * msg.process_value_dot;
                  break;
       }
     }

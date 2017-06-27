@@ -163,25 +163,25 @@ namespace mav_control_attitude {
     void MPCAttitudeControllerNode::MovingMass0Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_0_position_ = msg.process_value;
       movable_mass_0_speed_ = msg.process_value_dot;
-      linear_mpc_pitch_.setMovingMassState(msg, 0);
+      linear_mpc_pitch_.setMovingMassState(msg, 0, +1.0);
     }
 
     void MPCAttitudeControllerNode::MovingMass1Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_1_position_ = msg.process_value;
       movable_mass_1_speed_ = msg.process_value_dot;
-      linear_mpc_roll_.setMovingMassState(msg, 0);
+      linear_mpc_roll_.setMovingMassState(msg, 0, -1.0);
     }
 
     void MPCAttitudeControllerNode::MovingMass2Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_2_position_ = msg.process_value;
       movable_mass_2_speed_ = msg.process_value_dot;
-      linear_mpc_pitch_.setMovingMassState(msg, 1);
+      linear_mpc_pitch_.setMovingMassState(msg, 1, -1.0);
     }
 
     void MPCAttitudeControllerNode::MovingMass3Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_3_position_ = msg.process_value;
       movable_mass_3_speed_ = msg.process_value_dot;
-      linear_mpc_roll_.setMovingMassState(msg, 1);
+      linear_mpc_roll_.setMovingMassState(msg, 1, +1.0);
     }
 
     bool MPCAttitudeControllerNode::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
