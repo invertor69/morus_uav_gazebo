@@ -118,7 +118,23 @@ bool KFDisturbanceObserver::updateEstimator() {
     return false;
   }
 
-  // TODO limiting maybe
+  Eigen::Matrix<double, kDisturbanceSize, 1> estimated_disturbances;
+  estimated_disturbances = state_.segment(6, kDisturbanceSize); // disturbances -> need to limit them !!
+
+  // min limits
+  Eigen::Matrix<double, kDisturbanceSize, 1> lower_limits;
+  lower_limits << -0.29, -2, -0.29, -2.0, -0.5, -2.0;
+  estimated_disturbances = estimated_disturbances.cwiseMax(lower_limits);
+
+  // max limits
+  Eigen::Matrix<double, kDisturbanceSize, 1> upper_limits;
+  upper_limits << 0.29, 2, 0.29, 2.0, 0.5, 2.0;
+  estimated_disturbances = estimated_disturbances.cwiseMin(upper_limits);
+
+  // update state disturbances after the limits
+  //state_ << state_.segment(0,kStateSizeKalman-kDisturbanceSize),  estimated_disturbances;
+  state_.segment(kStateSize, kDisturbanceSize) << estimated_disturbances;
+
   return true;
 }
 
