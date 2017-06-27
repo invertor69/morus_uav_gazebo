@@ -193,7 +193,7 @@ namespace mav_control_attitude {
             ROS_INFO_STREAM("B_d: \n" << model_Bd_);
         }
 
-        // TODO init the solver and impement the real regulator
+        // TODO init the solver and implement the real regulator
         //Solver initialization
         //set_defaults();
         //setup_indexing();
@@ -309,7 +309,6 @@ namespace mav_control_attitude {
 
       // Kalman filter and disturbance observer
       if (!initialized_observer_){
-        disturbance_observer_.reset();
         disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
                                               angle_, angular_velocity_);
@@ -325,7 +324,7 @@ namespace mav_control_attitude {
       bool observer_update_successful = disturbance_observer_.updateEstimator();
 
       if (!observer_update_successful){
-        disturbance_observer_.reset();
+        // reset observer
         disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
                                               angle_, angular_velocity_);
@@ -346,9 +345,10 @@ namespace mav_control_attitude {
       // feedback integration
       if(enable_integrator_){
         Eigen::Matrix<double, kMeasurementSize, 1> angle_error;
-        double antiwindup_ball = 2.0; // TODO magic numbers
 
         angle_error(0) = angle_sp_ - angle_;
+
+        double antiwindup_ball = 0.4; // TODO magic numbers - if current number too big
         // discrete integrator
         if (angle_error.norm() < antiwindup_ball) {
           angle_error_integration_ += angle_error * sampling_time_;
@@ -357,11 +357,11 @@ namespace mav_control_attitude {
         }
 
         Eigen::Matrix<double, kMeasurementSize, 1> integration_limits;
-        integration_limits(0) = 1.2; // TODO magic numbers
+        integration_limits(0) = 2.0; // TODO magic numbers - if integration too big
         angle_error_integration_ = angle_error_integration_.cwiseMax(-integration_limits);
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
-        estimated_disturbances_ -= 1.5 * angle_error_integration_; // TODO magic number gain
+        estimated_disturbances_ -= 0.5 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_; // TODO magic number gain
       };
 
       // TODO init the solver and implement the MPC

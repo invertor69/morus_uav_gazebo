@@ -32,10 +32,14 @@
   <!-- start control stack -->
   <include file="$(find morus_control)/launch/morus_control.launch"/>
 
+  <!-- GUI for debuging and control -->
+  <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"> </node>
+
   <!-- Here starts joystick -->
-<!--
+  <!--
   <include file="$(find morus_joy)/launch/morus_joy_teleop.launch">
     <arg name="joy_config" value="$(arg joy_config)" />
   </include>
--->
+  -->
+
 </launch>
