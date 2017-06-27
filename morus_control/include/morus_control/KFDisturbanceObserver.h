@@ -17,22 +17,21 @@ namespace mav_control_attitude {
 class KFDisturbanceObserver
 {
  private:
-  static constexpr int kStateSizeKalman = 7;
-  static constexpr int kMeasurementSizeKalman = 6;
 
   static constexpr int kStateSize = 6;
   static constexpr int kMeasurementSize = 1;
-  static constexpr int kDisturbanceSize = 1;
+  static constexpr int kDisturbanceSize = 6;
   static constexpr int kInputSize = 2;
   static constexpr double kGravity = 9.8066;
-  
+
+  static constexpr int kStateSizeKalman = kStateSize + kDisturbanceSize;
+  static constexpr int kMeasurementSizeKalman = kStateSize;
+
  public:
   KFDisturbanceObserver(const ros::NodeHandle& nh, const ros::NodeHandle& private_nh);
   virtual ~KFDisturbanceObserver();
 
   //Feeding
-  void reset();
-
   // Setting
   void setMeasuredStates(double movable_mass_0_position, double movable_mass_0_speed,
                          double movable_mass_1_position, double movable_mass_1_speed,
@@ -62,6 +61,14 @@ class KFDisturbanceObserver
     state_(4) = angle;
     state_(5) = angular_velocity;
     state_(6) = 0.0; // disturbance
+    state_(7) = 0.0; // disturbance
+    state_(8) = 0.0; // disturbance
+    state_(9) = 0.0; // disturbance
+    state_(10) = 0.0; // disturbance
+    state_(11) = 0.0; // disturbance
+
+    // reset state_covariance_
+    state_covariance_ = initial_state_covariance_.asDiagonal();
   }
 
   void setSystemMatrices(Eigen::Matrix<double, kStateSize, kStateSize> model_A,

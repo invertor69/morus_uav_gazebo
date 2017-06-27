@@ -20,27 +20,18 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
       private_nh_(private_nh),
       initialized_(false)
 {
-    initial_state_covariance_(0) = 1.0;
-    initial_state_covariance_(1) = 1.0;
-    initial_state_covariance_(2) = 1.0;
-    initial_state_covariance_(3) = 1.0;
-    initial_state_covariance_(4) = 1.0;
-    initial_state_covariance_(5) = 1.0;
-    initial_state_covariance_(6) = 1.0;
+    initial_state_covariance_.setOnes();
     state_covariance_.setZero();
 
+    state_.setZero();
+
     process_noise_covariance_.setIdentity();
-    process_noise_covariance_ *= 10.0;
+    process_noise_covariance_ *= 0.2;
     measurement_covariance_.setIdentity();
+    measurement_covariance_ *= 0.2;
 
     initialized_ = true;
     ROS_INFO("Kalman Filter Initialized!");
-}
-
-void KFDisturbanceObserver::reset()
-{
-  state_covariance_ = initial_state_covariance_.asDiagonal();
-  state_.setZero();
 }
 
 void KFDisturbanceObserver::calculateKalmanMatrices(Eigen::Matrix<double, kStateSizeKalman, kStateSizeKalman> *F_,
@@ -59,7 +50,6 @@ void KFDisturbanceObserver::calculateKalmanMatrices(Eigen::Matrix<double, kState
 
   tempH.resize(kMeasurementSizeKalman, kStateSizeKalman);
   tempH.setIdentity();
-  tempH(6) = 0.0;
   (*H_) = tempH;
 
 }

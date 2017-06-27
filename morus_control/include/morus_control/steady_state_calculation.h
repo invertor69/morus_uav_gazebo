@@ -52,7 +52,7 @@ class SteadyStateCalculation
   static constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
   static constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
   static constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-  static constexpr int kDisturbanceSize = 1; // [theta] -> B_d is [6,1]
+  static constexpr int kDisturbanceSize = 6; // [theta] -> B_d is [6,1]
 
   typedef const Eigen::Matrix<double, kDisturbanceSize, 1> EstimatedDisturbanceVector;
   typedef const Eigen::Matrix<double, kMeasurementSize, 1> ReferenceVector;
