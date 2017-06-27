@@ -36,10 +36,11 @@
         </node>
 
         <!-- attitude MPC control -->
+        <!-- debugging purposes !!!!!!!!!!!!
         <node pkg="morus_control" type="mass_ctl_attitude_mpc_node" name="mass_ctl_attitude_mpc"
               output="screen" ns="$(arg namespace)">
         </node>
-
+        -->
     </group>
 
 

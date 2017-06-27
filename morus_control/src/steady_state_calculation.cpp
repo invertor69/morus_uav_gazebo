@@ -61,14 +61,15 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
   Bd_ = Bd;
   Eigen::MatrixXd C(kMeasurementSize, kStateSize);
   C.setZero();
-  C(0,4) = 1.0; // measured only the angle
+  C(4) = 1.0; // measured only the angle
 
-  left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, C, Eigen::MatrixXd::Zero(
-      kMeasurementSize, kInputSize);
+  left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B,
+      C, Eigen::MatrixXd::Zero(kMeasurementSize, kInputSize);
   pseudo_inverse_left_hand_side_ = (left_hand_side.transpose() * left_hand_side).inverse()
       * left_hand_side.transpose();
 
   if (verbose_) {
+    ROS_INFO_STREAM("Left hand side of steady state calculation: \n" << left_hand_side);
     ROS_INFO_STREAM("pseudo inverse left hand side of steady state calculation: \n" << pseudo_inverse_left_hand_side_);
   }
 

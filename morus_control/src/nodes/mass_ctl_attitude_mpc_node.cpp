@@ -94,22 +94,24 @@ namespace mav_control_attitude {
         euler_rate_mv_.y = cx * q - sx * r;
         euler_rate_mv_.z = sx / cy * q + cx / cy * r;
 
+        // publish states in roll,pitch,jaw format
+        morus_msgs::AngleAndAngularVelocity angles_velocities;
+        angles_velocities.roll = (float)  euler_mv_.x;
+        angles_velocities.pitch = (float) euler_mv_.y;
+        angles_velocities.jaw = (float)   euler_mv_.z;
+
+        angles_velocities.roll_dot = (float)  euler_rate_mv_.x;
+        angles_velocities.pitch_dot = (float) euler_rate_mv_.y;
+        angles_velocities.jaw_dot = (float)   euler_rate_mv_.z;
+        angles_velocities.header.stamp = ros::Time::now();
+
+        pub_angle_state_.publish(angles_velocities);
+
         // publish to check if calculation
         if (verbose_) {
           ROS_INFO_STREAM("angles: \n roll: " << euler_mv_.x <<
                                  "\n pitch: " << euler_mv_.y <<
                                    "\n jaw: " << euler_mv_.z);
-          morus_msgs::AngleAndAngularVelocity angles_velocities;
-          angles_velocities.roll = (float)  euler_mv_.x;
-          angles_velocities.pitch = (float) euler_mv_.y;
-          angles_velocities.jaw = (float)   euler_mv_.z;
-
-          angles_velocities.roll_dot = (float)  euler_rate_mv_.x;
-          angles_velocities.pitch_dot = (float) euler_rate_mv_.y;
-          angles_velocities.jaw_dot = (float)   euler_rate_mv_.z;
-          angles_velocities.header.stamp = ros::Time::now();
-
-          pub_angle_state_.publish(angles_velocities);
         }
 
         // Calculation of the output
