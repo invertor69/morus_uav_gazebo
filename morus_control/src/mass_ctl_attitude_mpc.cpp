@@ -28,25 +28,25 @@ namespace mav_control_attitude {
               */
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(8.0, 0.0),
+              q_attitude_(7.0, 0.0),
               r_command_(1.0, 1.0),
               r_delta_command_(0.1, 0.1)
     {
-     initializeSystem(); // init the system and its parameters
+     initializeParameters(); // init the system and its parameters
 
      // debugging publishers
      target_state_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_states/", 1);
-     target_input_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_input/", 1);
-     disturbances_pub_ =  nh_.advertise<std_msgs::Float64MultiArray>("mpc/disturbances/", 1);
+     target_input_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_input/",  1);
+     disturbances_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/disturbances/",  1);
     }
 
     MPCAttitudeController::~MPCAttitudeController() { }
 
 /**
     Set the matrices of the system dynamics model_A, model_B and model_Bd
-    Initialize the "steady_state_calculation" and "disturbance_observer_" TODO
+    Initialize the "steady_state_calculation" and "disturbance_observer_"
  */
-    void MPCAttitudeController::initializeSystem() {
+    void MPCAttitudeController::initializeParameters() {
         mass_ = 1.0;
         mass_quad_ = 30.8;
         M_ = mass_quad_ + 4 * mass_;
@@ -193,9 +193,8 @@ namespace mav_control_attitude {
             ROS_INFO_STREAM("B_d: \n" << model_Bd_);
         }
 
-        // TODO init the solver and implement the real regulator
         //Solver initialization
-        //set_defaults();
+        set_defaults(); // Set basic algorithm parameters.
         //setup_indexing();
 
         //Solver settings
@@ -420,14 +419,14 @@ namespace mav_control_attitude {
       if (!getControllerName().compare("Roll controller") && verbose_){
         ROS_INFO_STREAM("target_states = \n" << target_state);
       }
-      error_states = target_state - current_state;
 
       Eigen::Matrix<double, 2,1> K_I;
       K_I(0) = 2.5; // TODO magic number to look at, integrator constant
       K_I(1) = 2.5;
 
       // CALCULATING FEEDBACK WITH LQR !!!!!!
-      moving_mass_ref_temp_ = -LQR_K_ * current_state + K_I * angle_error_integration_;
+      error_states = target_state - current_state;
+      moving_mass_ref_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
 
       // min limits
       Eigen::Vector2d lower_limits_roll;

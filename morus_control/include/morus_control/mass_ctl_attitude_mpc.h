@@ -20,6 +20,9 @@
 #include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/src/MatrixFunctions/MatrixExponential.h>
 
+// CVXGEN solver
+#include <morus_control/solver.h>
+
 namespace mav_control_attitude {
     // constants
     // CC_MPC
@@ -35,9 +38,6 @@ namespace mav_control_attitude {
     constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
     constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
     constexpr int kDisturbanceSize = 6; // [theta, dtheta] -> B_d is [6,2]
-
-    constexpr int kStateSizeKalman = 7;
-    constexpr int kMeasurementSizeKalman = 6;
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
@@ -118,7 +118,7 @@ class MPCAttitudeController {
     ros::Publisher disturbances_pub_;
 
     //initialize system
-    void initializeSystem();
+    void initializeParameters();
     bool initialized_parameters_;
 
     // controller variables

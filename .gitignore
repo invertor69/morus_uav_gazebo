@@ -8,7 +8,6 @@ cmake_install.cmake
 *.cmake
 #ignore build dirs.
 build/
-lib/
 bin/
 #ignore bvt_sdk dirs
 */bvt_sdk/include/

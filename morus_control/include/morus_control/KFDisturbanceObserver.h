@@ -107,7 +107,7 @@ class KFDisturbanceObserver
   // x(k+1) = A*x(k) + B*u(k) + Bd*d(k)
   Eigen::Matrix<double, kStateSize, kStateSize> model_A_;   //dynamics matrix
   Eigen::Matrix<double, kStateSize, kInputSize> model_B_;   //transfer matrix
-  Eigen::Matrix<double, kStateSize, kDisturbanceSize> model_Bd_;  //Disturbance transfer  gas motor paramsmatrix
+  Eigen::Matrix<double, kStateSize, kDisturbanceSize> model_Bd_;  //Disturbance transfer  gas motor matrix
 
   void calculateKalmanMatrices(Eigen::Matrix<double, kStateSizeKalman, kStateSizeKalman>* F_,
                                Eigen::Matrix<double, kStateSizeKalman, kInputSize>* G_,
