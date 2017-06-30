@@ -195,20 +195,17 @@ namespace mav_control_attitude {
 
         //Solver initialization
         set_defaults(); // Set basic algorithm parameters.
-        //setup_indexing();
+        setup_indexing();
+        settings_ = settings;
+        params_ = params;
+        settings_.verbose = 0; // don't show every outcome of computation
 
-        //Solver settings
-        //settings.verbose = 0;
-
-        /*
-        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.A), kStateSize, kStateSize) =        model_A_;
-        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.B), kStateSize, kInputSize) =        model_B_;
-        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Bd), kStateSize, kDisturbanceSize) = model_Bd_;
-        */
-
+        // parameters A, B, Bd for CVXGEN set
+        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.A), kStateSize, kStateSize) =        model_A_;
+        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.B), kStateSize, kInputSize) =        model_B_;
+        Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.Bd), kStateSize, kDisturbanceSize) = model_Bd_;
 
         initialized_parameters_ = true;
-
         ROS_INFO("Linear MPC attitude controller: initialized correctly");
     }
 
@@ -265,6 +262,18 @@ namespace mav_control_attitude {
       Eigen::MatrixXd temporary_matrix = model_B_.transpose() * Q_final * model_B_ + R;
       LQR_K_ = temporary_matrix.inverse() * (model_B_.transpose() * Q_final * model_A_);
 
+      // parameters Q, P, R, R_delta for CVXGEN set
+      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.Q), kStateSize, kStateSize) = Q;
+      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.P), kStateSize, kStateSize) = Q_final;
+      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.R), kInputSize, kInputSize) = R;
+      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.R_delta), kInputSize, kInputSize) = R_delta;
+
+      // constraints for CVXGEN solver set
+      params_.u_max[0] = lm_/2 - 0.01;
+      params_.u_max[1] = lm_/2 - 0.01;
+
+      params_.u_min[0] = -params_.u_max[0];
+      params_.u_min[1] = -params_.u_max[1];
 
       /*
        * prepare the matrices for MPC calculation
@@ -420,13 +429,43 @@ namespace mav_control_attitude {
         ROS_INFO_STREAM("target_states = \n" << target_state);
       }
 
-      Eigen::Matrix<double, 2,1> K_I;
-      K_I(0) = 2.5; // TODO magic number to look at, integrator constant
-      K_I(1) = 2.5;
+      // fill in the structure for CVXGEN solver - x_ss[t], u_ss, x_0, d, u_prev
+      for (int i = 1; i < kPredictionHorizonSteps; i++) {
+        Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params_.x_ss[i])) = target_state;
+      }
+      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_ss)) = target_input;
+      Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0)) = current_state;
+      Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  )) = estimated_disturbances_;
+      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = moving_mass_ref_temp_;
+      steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
+                                                   &target_state, &target_input);
 
-      // CALCULATING FEEDBACK WITH LQR !!!!!!
-      error_states = target_state - current_state;
-      moving_mass_ref_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
+      // fill the extern structure for the solver
+      settings = settings_;
+      params = params_;
+
+      // solve the problem quadratic problem - only on pitch controller for now
+      if (!getControllerName().compare("Pitch controller")) {
+        solver_status_ = -1;
+      } else {
+        solver_status_ = -1;
+      }
+
+      moving_mass_ref_temp_.setZero();
+      if (solver_status_ >= 0){ // solution found
+        moving_mass_ref_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
+        ROS_INFO_STREAM(moving_mass_ref_temp_);
+      }
+      else { // solution not found -> LQR working
+        //ROS_WARN("Linear MPC: Solver failed, use LQR backup");
+        Eigen::Matrix<double, 2,1> K_I;
+        K_I(0) = 1.5; // TODO magic number to look at, integrator constant
+        K_I(1) = 1.5;
+
+        // CALCULATING FEEDBACK WITH LQR !!!!!!
+        error_states = target_state - current_state;
+        moving_mass_ref_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
+      }
 
       // min limits
       Eigen::Vector2d lower_limits_roll;

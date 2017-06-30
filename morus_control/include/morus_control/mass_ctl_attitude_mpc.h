@@ -210,6 +210,11 @@ class MPCAttitudeController {
     Eigen::MatrixXd LQR_K_;
     Eigen::Vector2d moving_mass_ref_temp_;
 
+    // CVXGEN solver parameters (needed if more MPC's are used)
+    Params params_;
+    Settings settings_;
+    int solver_status_;
+
     // disturbance observer
     bool enable_offset_free_;
     bool enable_integrator_;
