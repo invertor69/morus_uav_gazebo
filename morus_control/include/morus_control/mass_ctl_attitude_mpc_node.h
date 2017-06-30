@@ -30,6 +30,7 @@ namespace mav_control_attitude {
         // calculation of the future input signals
         virtual bool calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
                                                   MPCAttitudeController* linear_mpc_commanded_angle);
+        bool calculateCommands();
 
         // publishers
         ros::Publisher pub_mass0_;

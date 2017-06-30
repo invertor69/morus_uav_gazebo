@@ -68,10 +68,6 @@ namespace mav_control_attitude {
 
         ROS_INFO_ONCE("MPCAttitudeController got first odometry message.");
 
-        if (!start_flag_){
-            start_flag_ = true;
-        }
-
         // read the msg
         double qx = msg.orientation.x;
         double qy = msg.orientation.y;
@@ -110,6 +106,13 @@ namespace mav_control_attitude {
         angles_velocities.header.stamp = ros::Time::now();
 
         pub_angle_state_.publish(angles_velocities);
+
+        if (!start_flag_){
+            start_flag_ = true;
+            // first execution, not to have big jump at the beggining
+            calculateCommands();
+            publishCommands();
+        }
 
         imu_received_ = true;
 
@@ -180,6 +183,20 @@ namespace mav_control_attitude {
       return true;
     }
 
+    bool MPCAttitudeControllerNode::calculateCommands() {
+
+        // set the data to the controllers
+        linear_mpc_roll_.setAngleState(euler_mv_.x);
+        linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
+
+        linear_mpc_pitch_.setAngleState(euler_mv_.y);
+        linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
+
+        // calculate the control signals - MAIN ALGORITHM !!!!!
+        calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
+        calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
+    }
+
     void MPCAttitudeControllerNode::publishCommands() {
         assert(mass_pitch_commands_.data());
         assert(mass_roll_commands_.data());
@@ -210,18 +227,7 @@ namespace mav_control_attitude {
                movable_mass_0_state_received_ && movable_mass_1_state_received_ &&
                movable_mass_2_state_received_ && movable_mass_3_state_received_) {
 
-               // calculate the output
-               // set the data to the controllers
-               linear_mpc_roll_.setAngleState(euler_mv_.x);
-               linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
-
-               linear_mpc_pitch_.setAngleState(euler_mv_.y);
-               linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
-
-               // calculate the control signals - MAIN ALGORITHM !!!!!
-               calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
-               calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
-
+               calculateCommands(); // calculate the output
                publishCommands(); // send the received commands to output
 
                // reset the flags for massages
@@ -248,6 +254,7 @@ int main(int argc, char **argv)
 
     mav_control_attitude::MPCAttitudeControllerNode MPC_attitude_controller_node(nh, private_nh);
 
+    // run the regulation
     MPC_attitude_controller_node.run();
 
     return 0;
