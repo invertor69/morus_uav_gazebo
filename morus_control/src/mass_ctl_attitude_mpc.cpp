@@ -30,7 +30,7 @@ namespace mav_control_attitude {
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
               q_attitude_(10.0, 0.0),
               r_command_(1.0, 1.0),
-              r_delta_command_(0.1, 0.1)
+              r_delta_command_(0.01, 0.01)
     {
      initializeParameters(); // init the system and its parameters
 
@@ -370,7 +370,7 @@ namespace mav_control_attitude {
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
         // TODO magic number gain
-        estimated_disturbances_ -= 0.002 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
+        estimated_disturbances_ -= 5.0 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
       };
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
@@ -394,7 +394,7 @@ namespace mav_control_attitude {
         steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
                                                     &target_state, &target_input);
         // Debugging variables
-        if (!getControllerName().compare("Roll controller")){
+        if (!getControllerName().compare("Pitch controller")){
           // publish target_state
           std_msgs::Float64MultiArray target_state_msg;
           target_state_msg.data.clear();
@@ -421,7 +421,7 @@ namespace mav_control_attitude {
         }
       }
 
-      if (!getControllerName().compare("Roll controller") && verbose_){
+      if (!getControllerName().compare("Pitch controller") && verbose_){
         ROS_INFO_STREAM("target_states = \n" << target_state);
       }
 
@@ -433,24 +433,20 @@ namespace mav_control_attitude {
       Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0)) = current_state;
       Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  )) = estimated_disturbances_;
       Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = moving_mass_ref_temp_;
-      steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
-                                                   &target_state, &target_input);
+      //steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
+      //                                             &target_state, &target_input);
 
       // fill the extern structure for the solver
       settings = settings_;
       params = params_;
 
       // solve the problem quadratic problem - only on pitch controller for now
-      if (!getControllerName().compare("Pitch controller")) {
-        solver_status_ = -1;
-      } else {
-        solver_status_ = -1;
-      }
+      solver_status_ = solve();
 
       moving_mass_ref_temp_.setZero();
-      if (solver_status_ >= 0){ // solution found
+      if (solver_status_ > 0){ // solution found
         moving_mass_ref_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
-        ROS_INFO_STREAM(moving_mass_ref_temp_);
+        //ROS_INFO_STREAM("Control signals from MPC Pitch: " << moving_mass_ref_temp_ << "\n");
       }
       else { // solution not found -> LQR working
         //ROS_WARN("Linear MPC: Solver failed, use LQR backup");
