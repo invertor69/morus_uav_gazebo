@@ -13,7 +13,7 @@ namespace mav_control_attitude {
               initialized_parameters_(false),  // after call of the "initializedSystem" it gets to "true"
               initialized_observer_(false),
               enable_integrator_(true),
-              enable_offset_free_(true),
+              enable_offset_free_(false),
               angle_error_integration_(0.0),
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
@@ -28,7 +28,7 @@ namespace mav_control_attitude {
               */
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(7.0, 0.0),
+              q_attitude_(10.0, 0.0),
               r_command_(1.0, 1.0),
               r_delta_command_(0.1, 0.1)
     {
@@ -359,31 +359,26 @@ namespace mav_control_attitude {
         double antiwindup_ball = 0.4; // TODO magic numbers - if current number too big
         // discrete integrator
         if (angle_error.norm() < antiwindup_ball) {
-          angle_error_integration_ += angle_error * sampling_time_;
+          angle_error_integration_ += angle_error * prediction_sampling_time_;
         } else {
           angle_error_integration_.setZero();
         }
 
         Eigen::Matrix<double, kMeasurementSize, 1> integration_limits;
-        integration_limits(0) = 2.0; // TODO magic numbers - if integration too big
+        integration_limits(0) = 20.0; // TODO magic numbers - if integration too big
         angle_error_integration_ = angle_error_integration_.cwiseMax(-integration_limits);
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
-        estimated_disturbances_ -= 0.5 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_; // TODO magic number gain
+        // TODO magic number gain
+        estimated_disturbances_ -= 0.002 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
       };
-
-      // TODO init the solver and implement the MPC
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
       Eigen::Matrix<double, kInputSize, 1> target_input;
 
       // creating the "target_state" and "current_state" variables
-      target_state(0,0) = 0.0;
-      target_state(1,0) = 0.0;
-      target_state(2,0) = 0.0;
-      target_state(3,0) = 0.0;
+      target_state.setZero();
       target_state(4,0) = angle_sp_;
-      target_state(5,0) = 0.0;
 
       current_state(0,0) = movable_mass_0_position_;
       current_state(1,0) = movable_mass_0_speed_;
@@ -392,12 +387,13 @@ namespace mav_control_attitude {
       current_state(4,0) = angle_;
       current_state(5,0) = angular_velocity_;
 
-      // experimental
-      Eigen::Matrix<double, kMeasurementSize, 1> ref;
+      Eigen::VectorXd ref(kMeasurementSize);
       ref << angle_sp_;
+
       if (enable_offset_free_){
         steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
                                                     &target_state, &target_input);
+        // Debugging variables
         if (!getControllerName().compare("Roll controller")){
           // publish target_state
           std_msgs::Float64MultiArray target_state_msg;

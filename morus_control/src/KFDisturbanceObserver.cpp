@@ -21,14 +21,15 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
       initialized_(false)
 {
     initial_state_covariance_.setOnes();
+    initial_state_covariance_ *= 0.2;
     state_covariance_.setZero();
 
     state_.setZero();
 
     process_noise_covariance_.setIdentity();
-    process_noise_covariance_ *= 0.2;
+    process_noise_covariance_ *= 2.0;
     measurement_covariance_.setIdentity();
-    measurement_covariance_ *= 0.2;
+    measurement_covariance_ *= 2.0;
 
     initialized_ = true;
     ROS_INFO("Kalman Filter Initialized!");
@@ -132,7 +133,6 @@ bool KFDisturbanceObserver::updateEstimator() {
   estimated_disturbances = estimated_disturbances.cwiseMin(upper_limits);
 
   // update state disturbances after the limits
-  //state_ << state_.segment(0,kStateSizeKalman-kDisturbanceSize),  estimated_disturbances;
   state_.segment(kStateSize, kDisturbanceSize) << estimated_disturbances;
 
   return true;
