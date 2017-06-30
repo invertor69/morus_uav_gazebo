@@ -109,7 +109,7 @@ namespace mav_control_attitude {
 
         if (!start_flag_){
             start_flag_ = true;
-            // first execution, not to have big jump at the beggining
+            // first execution, not to have big jump at the beginning
             calculateCommands();
             publishCommands();
         }
@@ -217,7 +217,7 @@ namespace mav_control_attitude {
     void MPCAttitudeControllerNode::run() {
 
         // define sampling time
-      ros::Rate loop_rate(10); // 100 Hz -> Ts = 0.01 s
+      ros::Rate loop_rate(10); // 10 Hz -> Ts = 0.1 s
 
        while (ros::ok()){
            ros::spinOnce();

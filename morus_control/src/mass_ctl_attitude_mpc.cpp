@@ -13,7 +13,7 @@ namespace mav_control_attitude {
               initialized_parameters_(false),  // after call of the "initializedSystem" it gets to "true"
               initialized_observer_(false),
               enable_integrator_(true),
-              enable_offset_free_(false),
+              enable_offset_free_(true),
               angle_error_integration_(0.0),
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),

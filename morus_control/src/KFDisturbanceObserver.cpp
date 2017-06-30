@@ -20,16 +20,21 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
       private_nh_(private_nh),
       initialized_(false)
 {
+    // P_k
     initial_state_covariance_.setOnes();
-    initial_state_covariance_ *= 0.2;
+    initial_state_covariance_ *= 1.0; // TODO outside parameter
     state_covariance_.setZero();
 
+    // x_k
     state_.setZero();
 
+    // Q_k
     process_noise_covariance_.setIdentity();
-    process_noise_covariance_ *= 2.0;
+    process_noise_covariance_ *= 0.001; // TODO outside parameter
+
+    // R_k
     measurement_covariance_.setIdentity();
-    measurement_covariance_ *= 2.0;
+    measurement_covariance_ *= 0.001; // TODO outside parameter
 
     initialized_ = true;
     ROS_INFO("Kalman Filter Initialized!");
@@ -56,8 +61,8 @@ void KFDisturbanceObserver::calculateKalmanMatrices(Eigen::Matrix<double, kState
 }
 
 void KFDisturbanceObserver::setSystemMatrices(Eigen::Matrix<double, kStateSize, kStateSize> model_A,
-                       Eigen::Matrix<double, kStateSize, kInputSize> model_B,
-                       Eigen::Matrix<double, kStateSize, kDisturbanceSize> model_Bd)
+                                              Eigen::Matrix<double, kStateSize, kInputSize> model_B,
+                                              Eigen::Matrix<double, kStateSize, kDisturbanceSize> model_Bd)
 {
   this -> model_A_ = model_A;
   this -> model_B_ = model_B;
