@@ -40,18 +40,22 @@ namespace mav_control_attitude {
 
         // Subscribers ( nh <- )
         imu_subscriber_ = nh_.subscribe("imu", 1, &MPCAttitudeControllerNode::AhrsCallback, this); // measured values info
+        imu_received_ = false;
         mot_vel_ref_subscriber_ = nh_.subscribe("mot_vel_ref", 1, &MPCAttitudeControllerNode::MotVelRefCallback, this);
         euler_ref_subscriber_ = nh_.subscribe("euler_ref", 1, &MPCAttitudeControllerNode::EulerRefCallback, this); // reference for the angles
         clock_subscriber_ = nh_.subscribe("/clock", 1, &MPCAttitudeControllerNode::ClockCallback, this);  // internal clock variable
         // position of mass 0
         movable_mass_0_state_subscriber_= nh_.subscribe("movable_mass_0_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass0Callback, this);
+        movable_mass_0_state_received_ = false;
         // position of mass 1
         movable_mass_1_state_subscriber_= nh_.subscribe("movable_mass_1_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass1Callback, this);
+        movable_mass_1_state_received_ = false;
         // position of mass 2
         movable_mass_2_state_subscriber_= nh_.subscribe("movable_mass_2_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass2Callback, this);
+        movable_mass_2_state_received_ = false;
         // position of mass 3
         movable_mass_3_state_subscriber_= nh_.subscribe("movable_mass_3_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass3Callback, this);
-
+        movable_mass_3_state_received_ = false;
     }
 
     MPCAttitudeControllerNode::~MPCAttitudeControllerNode() {
@@ -107,6 +111,8 @@ namespace mav_control_attitude {
 
         pub_angle_state_.publish(angles_velocities);
 
+        imu_received_ = true;
+
         // publish to check if calculation
         if (verbose_) {
           ROS_INFO_STREAM("angles: \n roll: " << euler_mv_.x <<
@@ -114,30 +120,6 @@ namespace mav_control_attitude {
                                    "\n jaw: " << euler_mv_.z);
         }
 
-        // Calculation of the output
-
-        // set the data to the controllers
-        linear_mpc_roll_.setAngleState(euler_mv_.x);
-        linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
-
-        linear_mpc_pitch_.setAngleState(euler_mv_.y);
-        linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
-
-        // calculate the control signals - MAIN ALGORITHM !!!!!
-        calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
-        calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
-
-        std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
-        mass0_command_msg.data =  mass_pitch_commands_(0);
-        mass1_command_msg.data = -mass_roll_commands_(0);
-        mass2_command_msg.data = -mass_pitch_commands_(1);
-        mass3_command_msg.data =  mass_roll_commands_(1);
-
-        // publish the new references for the masses
-        pub_mass0_.publish(mass0_command_msg);
-        pub_mass1_.publish(mass1_command_msg);
-        pub_mass2_.publish(mass2_command_msg);
-        pub_mass3_.publish(mass3_command_msg);
     }
 
     void MPCAttitudeControllerNode::MotVelRefCallback(const std_msgs::Float32 &msg) {
@@ -166,24 +148,28 @@ namespace mav_control_attitude {
       movable_mass_0_position_ = msg.process_value;
       movable_mass_0_speed_ = msg.process_value_dot;
       linear_mpc_pitch_.setMovingMassState(msg, 0, +1.0);
+      movable_mass_0_state_received_ = true;
     }
 
     void MPCAttitudeControllerNode::MovingMass1Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_1_position_ = msg.process_value;
       movable_mass_1_speed_ = msg.process_value_dot;
       linear_mpc_roll_.setMovingMassState(msg, 0, -1.0);
+      movable_mass_1_state_received_ = true;
     }
 
     void MPCAttitudeControllerNode::MovingMass2Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_2_position_ = msg.process_value;
       movable_mass_2_speed_ = msg.process_value_dot;
       linear_mpc_pitch_.setMovingMassState(msg, 1, -1.0);
+      movable_mass_2_state_received_ = true;
     }
 
     void MPCAttitudeControllerNode::MovingMass3Callback(const control_msgs::JointControllerState& msg) {
       movable_mass_3_position_ = msg.process_value;
       movable_mass_3_speed_ = msg.process_value_dot;
       linear_mpc_roll_.setMovingMassState(msg, 1, +1.0);
+      movable_mass_3_state_received_ = true;
     }
 
     bool MPCAttitudeControllerNode::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
@@ -194,12 +180,61 @@ namespace mav_control_attitude {
       return true;
     }
 
+    void MPCAttitudeControllerNode::publishCommands() {
+        assert(mass_pitch_commands_.data());
+        assert(mass_roll_commands_.data());
+
+        std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
+        mass0_command_msg.data =  mass_pitch_commands_(0);
+        mass1_command_msg.data = -mass_roll_commands_(0);
+        mass2_command_msg.data = -mass_pitch_commands_(1);
+        mass3_command_msg.data =  mass_roll_commands_(1);
+
+        // publish the new references for the masses
+        pub_mass0_.publish(mass0_command_msg);
+        pub_mass1_.publish(mass1_command_msg);
+        pub_mass2_.publish(mass2_command_msg);
+        pub_mass3_.publish(mass3_command_msg);
+    }
+
     void MPCAttitudeControllerNode::run() {
-      // define sampling time
+
+        // define sampling time
       ros::Rate loop_rate(10); // 100 Hz -> Ts = 0.01 s
-      while (ros::ok()){
-        ros::spinOnce();
-        loop_rate.sleep();
+
+       while (ros::ok()){
+           ros::spinOnce();
+
+           // if all the measurements are received
+           if (imu_received_ &&
+               movable_mass_0_state_received_ && movable_mass_1_state_received_ &&
+               movable_mass_2_state_received_ && movable_mass_3_state_received_) {
+
+               // calculate the output
+               // set the data to the controllers
+               linear_mpc_roll_.setAngleState(euler_mv_.x);
+               linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
+
+               linear_mpc_pitch_.setAngleState(euler_mv_.y);
+               linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
+
+               // calculate the control signals - MAIN ALGORITHM !!!!!
+               calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
+               calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
+
+               publishCommands(); // send the received commands to output
+
+               // reset the flags for massages
+               imu_received_                  = false;
+               movable_mass_0_state_received_ = false;
+               movable_mass_1_state_received_ = false;
+               movable_mass_2_state_received_ = false;
+               movable_mass_3_state_received_ = false;
+           }
+
+           // go to another anotation and keep the sampling time
+           loop_rate.sleep();
+
       }
     }
 }

@@ -36,6 +36,8 @@ namespace mav_control_attitude {
         ros::Publisher pub_mass1_;
         ros::Publisher pub_mass2_;
         ros::Publisher pub_mass3_;
+
+        void publishCommands();
         // debugging publisher
         ros::Publisher pub_angle_state_;
         // variables to hold the setpoints for the moving masses
@@ -56,6 +58,7 @@ namespace mav_control_attitude {
                 double y;
                 double z;
             } euler_rate_mv_;
+            bool imu_received_; // received msg from imu
 
         ros::Subscriber mot_vel_ref_subscriber_;
             void MotVelRefCallback(const std_msgs::Float32& msg);
@@ -73,21 +76,25 @@ namespace mav_control_attitude {
             void MovingMass0Callback(const control_msgs::JointControllerState& msg);
             double movable_mass_0_position_;
             double movable_mass_0_speed_;
+            bool movable_mass_0_state_received_;
 
         ros::Subscriber movable_mass_1_state_subscriber_;
             void MovingMass1Callback(const control_msgs::JointControllerState& msg);
             double movable_mass_1_position_;
             double movable_mass_1_speed_;
+            bool movable_mass_1_state_received_;
 
         ros::Subscriber movable_mass_2_state_subscriber_;
             void MovingMass2Callback(const control_msgs::JointControllerState& msg);
             double movable_mass_2_position_;
             double movable_mass_2_speed_;
+            bool movable_mass_2_state_received_;
 
         ros::Subscriber movable_mass_3_state_subscriber_;
             void MovingMass3Callback(const control_msgs::JointControllerState& msg);
             double movable_mass_3_position_;
             double movable_mass_3_speed_;
+            bool movable_mass_3_state_received_;
 
         // debug info
         bool verbose_;
