@@ -8,6 +8,12 @@
 /* Description: Header file with relevant definitions. */
 #ifndef SOLVER_H
 #define SOLVER_H
+
+// enable the C++ compiler to compile C code
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Uncomment the next line to remove all library dependencies. */
 /*#define ZERO_LIBRARY_MODE */
 #ifdef MATLAB_MEX_FILE
@@ -239,9 +245,14 @@ float toc(void);
 float tocq(void);
 void printmatrix(char *name, double *A, int m, int n, int sparse);
 double unif(double lower, double upper);
-float ran1(long*idum, int reset);
+float ran1(long *idum, int reset);
 float randn_internal(long *idum, int reset);
 double randn(void);
 void reset_rand(void);
+
+// enable the C++ compiler to compile C code
+#ifdef __cplusplus
+}
+#endif
 
 #endif

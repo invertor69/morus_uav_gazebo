@@ -61,19 +61,24 @@ add_library(cvxgen_solver_moving_masses
         lib/matrix_support.c
         lib/util.c
         lib/variables_definition.c
-        )
+)
 
 # general algorithm for executing
 add_library(mass_ctl_attitude_mpc
         src/mass_ctl_attitude_mpc.cpp
         src/steady_state_calculation.cpp
-        src/KFDisturbanceObserver.cpp)
+        src/KFDisturbanceObserver.cpp
+        lib/solver.c
+)
+
+add_dependencies(mass_ctl_attitude_mpc
+        cvxgen_solver_moving_masses
+)
 
 target_link_libraries(mass_ctl_attitude_mpc
         cvxgen_solver_moving_masses
         ${catkin_LIBRARIES}
 )
-add_dependencies(mass_ctl_attitude_mpc cvxgen_solver_moving_masses)
 
 # target_include_directories(cvxgen_solver_moving_masses PUBLIC lib)
 
@@ -86,7 +91,7 @@ add_dependencies(mass_ctl_attitude_mpc cvxgen_solver_moving_masses)
 #        include/morus_control/mass_ctl_attitude_mpc_node.h
 #        include/morus_control/steady_state_calculation.h
 #        )
-#
+
 add_executable(mass_ctl_attitude_mpc_node
         src/nodes/mass_ctl_attitude_mpc_node.cpp)
 
