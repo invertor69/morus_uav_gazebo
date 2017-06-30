@@ -196,7 +196,7 @@ namespace mav_control_attitude {
 
     void MPCAttitudeControllerNode::run() {
       // define sampling time
-      ros::Rate loop_rate(100); // 100 Hz -> Ts = 0.01 s
+      ros::Rate loop_rate(10); // 100 Hz -> Ts = 0.01 s
       while (ros::ok()){
         ros::spinOnce();
         loop_rate.sleep();
