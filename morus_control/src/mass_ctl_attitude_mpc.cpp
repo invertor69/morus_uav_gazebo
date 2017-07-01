@@ -370,7 +370,7 @@ namespace mav_control_attitude {
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
         // TODO magic number gain
-        estimated_disturbances_ -= 5.0 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
+        estimated_disturbances_ -= 6.5 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
       };
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
@@ -433,8 +433,6 @@ namespace mav_control_attitude {
       Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0)) = current_state;
       Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  )) = estimated_disturbances_;
       Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = moving_mass_ref_temp_;
-      //steady_state_calculation_.computeSteadyState(estimated_disturbances_, ref,
-      //                                             &target_state, &target_input);
 
       // fill the extern structure for the solver
       settings = settings_;
