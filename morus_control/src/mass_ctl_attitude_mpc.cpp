@@ -45,9 +45,10 @@ namespace mav_control_attitude {
 
 /**
     Set the matrices of the system dynamics model_A, model_B and model_Bd
-    Initialize the "steady_state_calculation" and "disturbance_observer_"
+    TODO Cound be done with Yaml file !!!
  */
-    void MPCAttitudeController::initializeParameters() {
+    void MPCAttitudeController::initializeParameters()
+    {
         mass_ = 1.0;
         mass_quad_ = 30.8;
         M_ = mass_quad_ + 4 * mass_;
@@ -160,10 +161,8 @@ namespace mav_control_attitude {
         B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
         B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
-        // disturbance on angle and angular speed [theta, dtheta] -> B_d is [6,2]
+        // disturbance on every state, at least some -> B_d is [6,6]
         // introduces Moment of disturbance to be estimated
-        //Bd_continous_time(4,0) = 1.0;
-        //Bd_continous_time(5,1) = 1.0;
         Bd_continous_time.setIdentity();
 
         // discretization of matrix A
@@ -210,7 +209,8 @@ namespace mav_control_attitude {
         ROS_INFO("Linear MPC attitude controller: initialized correctly");
     }
 
-    void MPCAttitudeController::applyParameters() {
+    void MPCAttitudeController::applyParameters()
+    {
       /// dynamic init of controller parameters
 
       Eigen::Matrix<double, kStateSize, kStateSize> Q;
@@ -292,7 +292,8 @@ namespace mav_control_attitude {
       }
     }
 
-    void MPCAttitudeController::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_mass_ref)
+    void MPCAttitudeController::calculateMovingMassesCommand(
+        Eigen::Matrix<double, 2, 1>* moving_mass_ref)
     {
       assert(moving_mass_ref != nullptr);
       assert(initialized_parameters_);
@@ -356,8 +357,9 @@ namespace mav_control_attitude {
 
         // TODO magic number gain
         Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
-        K_I_MPC.setZero();
-        K_I_MPC(4) = q_attitude_(0) * 0.08;
+        K_I_MPC.Ones();
+        K_I_MPC *= 0.4;
+        K_I_MPC(4) = 0.8;
         estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
 
@@ -426,14 +428,14 @@ namespace mav_control_attitude {
       settings = settings_;
       params = params_;
 
-      // solve the problem quadratic problem - only on pitch controller for now
+      // solve the problem quadratic problem
       solver_status_ = solve();
       // publish the solver status
       std_msgs::Int64 solver_status_msg;
       solver_status_msg.data = solver_status_;
       MPC_solver_status_pub_.publish(solver_status_msg);
 
-      moving_mass_ref_temp_.setZero();
+      moving_mass_ref_temp_.setZero(); // reset the msg for input signals
       if (solver_status_ >= 0){ // solution found
         moving_mass_ref_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
       }

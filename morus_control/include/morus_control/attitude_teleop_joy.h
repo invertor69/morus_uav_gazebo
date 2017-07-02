@@ -16,7 +16,7 @@ namespace mav_control_attitude {
    private:
        ros::NodeHandle nh_, private_nh_;
 
-       ros::Publisher vel_pub_;
+       ros::Publisher euler_ref_pub_;
        ros::Subscriber joy_sub_;
 
        void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);

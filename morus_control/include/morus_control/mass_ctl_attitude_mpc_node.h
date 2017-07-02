@@ -26,8 +26,8 @@ namespace mav_control_attitude {
     private:
         ros::NodeHandle nh_, private_nh_;
 
+        // classes and structures used
         MPCAttitudeController linear_mpc_roll_, linear_mpc_pitch_;
-
         AttitudeJoy attitude_joy_;
 
         // calculation of the future input signals
