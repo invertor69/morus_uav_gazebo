@@ -7,10 +7,10 @@ namespace mav_control_attitude {
               private_nh_(private_nh),
               linear_mpc_roll_(nh_, private_nh_),
               linear_mpc_pitch_(nh_, private_nh_),
+              attitude_joy_(nh_, private_nh_),
               start_flag_(false),  // flag for the first measurement
               verbose_(false)
     {
-
         // init the readings od moving mass sensors
         movable_mass_0_position_ = 0.0;
         movable_mass_1_position_ = 0.0;

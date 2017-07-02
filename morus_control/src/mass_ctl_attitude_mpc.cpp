@@ -29,7 +29,7 @@ namespace mav_control_attitude {
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
               q_attitude_(10.0, 0.0),
-              r_command_(1.0, 1.0),
+              r_command_(1.0, 1.0), // LQR had 1.0
               r_delta_command_(0.01, 0.01)
     {
      initializeParameters(); // init the system and its parameters
@@ -38,6 +38,7 @@ namespace mav_control_attitude {
      target_state_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_states/", 1);
      target_input_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_input/",  1);
      disturbances_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/disturbances/",  1);
+     MPC_solver_status_pub_ = nh_.advertise<std_msgs::Int64>("mpc/solver_status/", 1);
     }
 
     MPCAttitudeController::~MPCAttitudeController() { }
@@ -184,7 +185,6 @@ namespace mav_control_attitude {
         model_B_ = integral_exp_A * B_continous_time;
         model_Bd_ = integral_exp_A * Bd_continous_time;
 
-        steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
         angle_error_integration_.setZero();
 
         if (verbose_) {
@@ -245,6 +245,8 @@ namespace mav_control_attitude {
 
       // fill the cost matrices - R
       R = r_command_.asDiagonal();
+      steady_state_calculation_.setRCommand(r_command_);
+      steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
 
       // fill the cost matrices - R_delta
       R_delta = r_delta_command_.asDiagonal();
@@ -275,24 +277,6 @@ namespace mav_control_attitude {
 
       params_.u_min[0] = -params_.u_max[0];
       params_.u_min[1] = -params_.u_max[1];
-
-      /*
-       * prepare the matrices for MPC calculation
-      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Q), kStateSize, kStateSize) = Q;
-      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Q_final), kStateSize, kStateSize) =
-          Q_final;
-      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.R), kInputSize, kInputSize) = R;
-      Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.R_omega), kInputSize, kInputSize) = R_delta
-          * (1.0 / sampling_time_ * sampling_time_);
-
-      params.u_max[0] = roll_limit_;
-      params.u_max[1] = pitch_limit_;
-      params.u_max[2] = thrust_max_;
-
-      params.u_min[0] = -roll_limit_;
-      params.u_min[1] = -pitch_limit_;
-      params.u_min[2] = thrust_min_;
-      */
 
       ROS_INFO("Linear MPC: Tuning parameters updated...");
       if (verbose_) {
@@ -360,7 +344,7 @@ namespace mav_control_attitude {
         double antiwindup_ball = 0.4; // TODO magic numbers - if current number too big
         // discrete integrator
         if (angle_error.norm() < antiwindup_ball) {
-          angle_error_integration_ += angle_error * prediction_sampling_time_;
+          angle_error_integration_ += angle_error * sampling_time_;
         } else {
           angle_error_integration_.setZero();
         }
@@ -371,7 +355,10 @@ namespace mav_control_attitude {
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
         // TODO magic number gain
-        estimated_disturbances_ -= 6.5 * Eigen::MatrixXd::Identity(kDisturbanceSize, kMeasurementSize) * angle_error_integration_;
+        Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
+        K_I_MPC.setZero();
+        K_I_MPC(4) = q_attitude_(0) * 0.08;
+        estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
 
       Eigen::Matrix<double, kStateSize, 1> target_state, current_state, error_states;
@@ -381,12 +368,12 @@ namespace mav_control_attitude {
       target_state.setZero();
       target_state(4,0) = angle_sp_;
 
-      current_state(0,0) = movable_mass_0_position_;
-      current_state(1,0) = movable_mass_0_speed_;
-      current_state(2,0) = movable_mass_1_position_;
-      current_state(3,0) = movable_mass_1_speed_;
-      current_state(4,0) = angle_;
-      current_state(5,0) = angular_velocity_;
+      current_state(0) = movable_mass_0_position_;
+      current_state(1) = movable_mass_0_speed_;
+      current_state(2) = movable_mass_1_position_;
+      current_state(3) = movable_mass_1_speed_;
+      current_state(4) = angle_;
+      current_state(5) = angular_velocity_;
 
       Eigen::VectorXd ref(kMeasurementSize);
       ref << angle_sp_;
@@ -461,12 +448,12 @@ namespace mav_control_attitude {
         moving_mass_ref_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
       }
 
-      // min limits
+      // command min limits
       Eigen::Vector2d lower_limits_roll;
       lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
       moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMax(lower_limits_roll);
 
-      // max limits
+      // command max limits
       Eigen::Vector2d upper_limits_roll;
       upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
       moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMin(upper_limits_roll);

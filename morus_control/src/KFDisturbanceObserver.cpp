@@ -30,11 +30,11 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
 
     // Q_k
     process_noise_covariance_.setIdentity();
-    process_noise_covariance_ *= 0.07; // TODO outside parameter
+    process_noise_covariance_ *= 1.0; // TODO outside parameter
 
     // R_k
     measurement_covariance_.setIdentity();
-    measurement_covariance_ *= 0.07; // TODO outside parameter
+    measurement_covariance_ *= 1.0; // TODO outside parameter
 
     initialized_ = true;
     ROS_INFO("Kalman Filter Initialized!");
@@ -75,6 +75,7 @@ bool KFDisturbanceObserver::updateEstimator() {
     return false;
 
   ROS_INFO_ONCE("KF is updated for first time.");
+  /*
   static ros::Time t_previous = ros::Time::now();
   static bool do_once = true;
   double dt;
@@ -96,6 +97,7 @@ bool KFDisturbanceObserver::updateEstimator() {
   if (dt < 0.005) {
     dt = 0.005;
   }
+  */
 
   // P_k^- = F_(k-1) * P_(k-1)^+ * F_(k-1)^T + process_noise_covariance(Q_(k-1))
   state_covariance_ = F_ * state_covariance_ * F_.transpose();
@@ -129,12 +131,12 @@ bool KFDisturbanceObserver::updateEstimator() {
 
   // min limits
   Eigen::Matrix<double, kDisturbanceSize, 1> lower_limits;
-  lower_limits << -0.29, -2, -0.29, -2.0, -0.5, -2.0;
+  lower_limits << -0.29, -2.0, -0.29, -2.0, -0.5, -2.0;
   estimated_disturbances = estimated_disturbances.cwiseMax(lower_limits);
 
   // max limits
   Eigen::Matrix<double, kDisturbanceSize, 1> upper_limits;
-  upper_limits << 0.29, 2, 0.29, 2.0, 0.5, 2.0;
+  upper_limits << 0.29, 2.0, 0.29, 2.0, 0.5, 2.0;
   estimated_disturbances = estimated_disturbances.cwiseMin(upper_limits);
 
   // update state disturbances after the limits

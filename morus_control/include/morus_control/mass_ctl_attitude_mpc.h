@@ -44,7 +44,7 @@ namespace mav_control_attitude {
     constexpr double kGravity = 9.80665;
 
     // sampling time parameters
-    constexpr double sampling_time_ = 0.01;
+    constexpr double sampling_time_ = 0.1;
     constexpr double prediction_sampling_time_ = 0.1;
     // TODO prebacit u YAML FILE pa da se dobije sa get_param
 
