@@ -92,10 +92,15 @@ target_link_libraries(mass_ctl_attitude_mpc
 #        include/morus_control/steady_state_calculation.h
 #        )
 
+add_library(attitude_teleop_joy
+        src/attitude_teleop_joy.cpp
+        include/morus_control/attitude_teleop_joy.h)
+
 add_executable(mass_ctl_attitude_mpc_node
         src/nodes/mass_ctl_attitude_mpc_node.cpp)
 
 target_link_libraries(mass_ctl_attitude_mpc_node
         ${catkin_LIBRARIES}
         mass_ctl_attitude_mpc
-        cvxgen_solver_moving_masses)
+        cvxgen_solver_moving_masses
+        attitude_teleop_joy)

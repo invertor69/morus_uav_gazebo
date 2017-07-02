@@ -45,4 +45,7 @@
 
     <!-- GUI for debuging and control -->
     <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"> </node>
+
+    <!-- Joystick reading -->
+    <node pkg="joy" type="joy_node" name="joy_node"> </node>
 </launch>

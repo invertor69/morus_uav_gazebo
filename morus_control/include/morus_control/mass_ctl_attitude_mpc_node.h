@@ -13,6 +13,7 @@
 #include "morus_msgs/AngleAndAngularVelocity.h"
 
 #include "morus_control/mass_ctl_attitude_mpc.h"
+#include "morus_control/attitude_teleop_joy.h"
 
 namespace mav_control_attitude {
     class MPCAttitudeControllerNode{
@@ -26,6 +27,8 @@ namespace mav_control_attitude {
         ros::NodeHandle nh_, private_nh_;
 
         MPCAttitudeController linear_mpc_roll_, linear_mpc_pitch_;
+
+        AttitudeJoy attitude_joy_;
 
         // calculation of the future input signals
         virtual bool calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
