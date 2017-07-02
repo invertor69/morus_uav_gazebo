@@ -12,6 +12,7 @@
 #include "rosgraph_msgs/Clock.h"
 #include "control_msgs/JointControllerState.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Int64.h"
 
 #include <ros/ros.h>
 #include <Eigen/Eigen>
@@ -116,6 +117,7 @@ class MPCAttitudeController {
     ros::Publisher target_state_pub_;
     ros::Publisher target_input_pub_;
     ros::Publisher disturbances_pub_;
+    ros::Publisher MPC_solver_status_pub_;
 
     //initialize system
     void initializeParameters();

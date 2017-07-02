@@ -199,6 +199,7 @@ namespace mav_control_attitude {
         settings_ = settings;
         params_ = params;
         settings_.verbose = 0; // don't show every outcome of computation
+        settings_.max_iters = 5;  // reduce the maximum iteration count, from 25.
 
         // parameters A, B, Bd for CVXGEN set
         Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.A), kStateSize, kStateSize) =        model_A_;
@@ -440,14 +441,17 @@ namespace mav_control_attitude {
 
       // solve the problem quadratic problem - only on pitch controller for now
       solver_status_ = solve();
+      // publish the solver status
+      std_msgs::Int64 solver_status_msg;
+      solver_status_msg.data = solver_status_;
+      MPC_solver_status_pub_.publish(solver_status_msg);
 
       moving_mass_ref_temp_.setZero();
-      if (solver_status_ > 0){ // solution found
+      if (solver_status_ >= 0){ // solution found
         moving_mass_ref_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
-        //ROS_INFO_STREAM("Control signals from MPC Pitch: " << moving_mass_ref_temp_ << "\n");
       }
       else { // solution not found -> LQR working
-        //ROS_WARN("Linear MPC: Solver failed, use LQR backup");
+        ROS_WARN("Linear MPC: Solver failed, use LQR backup");
         Eigen::Matrix<double, 2,1> K_I;
         K_I(0) = 1.5; // TODO magic number to look at, integrator constant
         K_I(1) = 1.5;
