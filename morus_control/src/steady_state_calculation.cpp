@@ -56,15 +56,25 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
                                         const Eigen::MatrixXd& Bd)
 {
   Eigen::MatrixXd left_hand_side;
-  left_hand_side.resize(kStateSize + kMeasurementSize, kStateSize + kInputSize);
+  left_hand_side.resize(kStateSize + kMeasurementSize+1, kStateSize + kInputSize+1);
 
   Bd_ = Bd;
   Eigen::MatrixXd C(kMeasurementSize, kStateSize);
   C.setZero();
   C(4) = 1.0; // measured only the angle
 
-  left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B,
-      C, Eigen::MatrixXd::Zero(kMeasurementSize, kInputSize);
+  Eigen::MatrixXd additional_row_MM;
+  additional_row_MM.resize(1, kStateSize + kInputSize + 1);
+  additional_row_MM.setZero();
+  additional_row_MM(0) =  r_command_(0);
+  additional_row_MM(2) = -r_command_(1);
+  additional_row_MM(kStateSize + kInputSize) = 0.1;
+
+  left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, Eigen::MatrixXd::Zero(kStateSize, 1),
+      C, Eigen::MatrixXd::Zero(kMeasurementSize, kInputSize+1),
+      additional_row_MM;
+
+
   pseudo_inverse_left_hand_side_ = (left_hand_side.transpose() * left_hand_side).inverse()
       * left_hand_side.transpose();
 
@@ -87,10 +97,12 @@ void SteadyStateCalculation::computeSteadyState(
   assert(steadystate_input);
   assert(initialized_params_);
 
-  Eigen::Matrix<double, kStateSize + kInputSize, 1> target_state_and_input;
-  Eigen::Matrix<double, kStateSize + kMeasurementSize, 1> right_hand_side;
+  Eigen::Matrix<double, kStateSize + kInputSize+1, 1> target_state_and_input;
+  Eigen::Matrix<double, kStateSize + kMeasurementSize+1, 1> right_hand_side;
 
-  right_hand_side << (-Bd_ * estimated_disturbance), reference;
+  right_hand_side << (-Bd_ * estimated_disturbance),
+      reference,
+      0;
 
   target_state_and_input = pseudo_inverse_left_hand_side_ * right_hand_side;
 
