@@ -90,8 +90,15 @@ namespace mav_control_attitude {
         */
 
         // parameters gotten from simulation
+        /*
         zeta_mm_ = 0.5755;
         w_mm_ = 5.8205;
+        */
+
+        // close true parameters proven with simulation
+        // tm = 0.21 s, sigma_m = 0.065944
+        zeta_mm_ = 0.6544;
+        w_mm_ =   19.7845;
 
         // construct model matrices
         Eigen::MatrixXd A_continous_time(kStateSize, kStateSize);
