@@ -359,7 +359,7 @@ namespace mav_control_attitude {
         Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
         K_I_MPC.Ones();
         K_I_MPC *= 0.4;
-        K_I_MPC(4) = 0.8;
+        K_I_MPC(4) = K_I_MPC_angle_;
         estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
 

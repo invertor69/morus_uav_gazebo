@@ -61,6 +61,7 @@ class MPCAttitudeController {
     // compute control input
     void calculateMovingMassesCommand(Eigen::Vector2d* moving_mass_ref);
 
+
     // setters
     void setAngleRef(double angle_sp)
     {
@@ -89,6 +90,11 @@ class MPCAttitudeController {
     void setAngleState(double angle)
     {
       angle_ = angle;
+    }
+
+    void setIntegratorConstantMPC(double K_I_MPC_angle)
+    {
+      K_I_MPC_angle_ = K_I_MPC_angle;
     }
 
     void setAngularVelocityState(double angular_velocity)
@@ -225,6 +231,9 @@ class MPCAttitudeController {
     Eigen::Matrix<double, kMeasurementSize, 1> angle_error_integration_;
     Eigen::Matrix<double, kDisturbanceSize, 1> estimated_disturbances_;
     KFDisturbanceObserver disturbance_observer_;
+
+    // controller gains
+    double K_I_MPC_angle_;
 };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_H

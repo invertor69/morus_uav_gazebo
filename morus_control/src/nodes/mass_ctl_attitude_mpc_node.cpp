@@ -8,6 +8,7 @@ namespace mav_control_attitude {
               linear_mpc_roll_(nh_, private_nh_),
               linear_mpc_pitch_(nh_, private_nh_),
               attitude_joy_(nh_, private_nh_),
+              dyn_config_server_(private_nh_),
               start_flag_(false),  // flag for the first measurement
               verbose_(false)
     {
@@ -30,6 +31,11 @@ namespace mav_control_attitude {
 
         linear_mpc_pitch_.applyParameters();
         linear_mpc_pitch_.setControllerName("Pitch controller");
+
+        // dynamic reconfigure server
+        dynamic_reconfigure::Server<morus_control::MPCAttitudeControllerConfig>::CallbackType f;
+        f = boost::bind(&MPCAttitudeControllerNode::DynConfigCallback, this, _1, _2);
+        dyn_config_server_.setCallback(f);
 
         // Publishers  ( nh -> )
         pub_mass0_ = nh_.advertise<std_msgs::Float64>("movable_mass_0_position_controller/command", 1);
@@ -59,6 +65,14 @@ namespace mav_control_attitude {
     }
 
     MPCAttitudeControllerNode::~MPCAttitudeControllerNode() {
+    }
+
+    void MPCAttitudeControllerNode::DynConfigCallback(morus_control::MPCAttitudeControllerConfig &config,
+                                                      uint32_t level)
+    {
+        ROS_INFO_STREAM(config.K_I_MPC);
+        linear_mpc_roll_.setIntegratorConstantMPC(config.K_I_MPC);
+        linear_mpc_pitch_.setIntegratorConstantMPC(config.K_I_MPC);
     }
 
     void MPCAttitudeControllerNode::AhrsCallback(const sensor_msgs::Imu &msg) {

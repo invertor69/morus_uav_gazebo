@@ -15,6 +15,10 @@
 #include "morus_control/mass_ctl_attitude_mpc.h"
 #include "morus_control/attitude_teleop_joy.h"
 
+// dynamic reconfigure files
+#include <dynamic_reconfigure/server.h>
+#include <morus_control/MPCAttitudeControllerConfig.h>
+
 namespace mav_control_attitude {
     class MPCAttitudeControllerNode{
 
@@ -29,6 +33,10 @@ namespace mav_control_attitude {
         // classes and structures used
         MPCAttitudeController linear_mpc_roll_, linear_mpc_pitch_;
         AttitudeJoy attitude_joy_;
+
+        // dynamic reconfigure server init
+        dynamic_reconfigure::Server<morus_control::MPCAttitudeControllerConfig> dyn_config_server_;
+        void DynConfigCallback(morus_control::MPCAttitudeControllerConfig &config, uint32_t level);
 
         // calculation of the future input signals
         virtual bool calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,

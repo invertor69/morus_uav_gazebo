@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
     control_msgs
     sensor_msgs
     morus_msgs
+    dynamic_reconfigure
 )
 
 # check c++11 / c++0x
@@ -31,6 +32,10 @@ find_package(cmake_modules REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIRS} )
 
+# dynamic reconfigurer
+generate_dynamic_reconfigure_options(config/LinearMPC.cfg)
+include_directories(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+
 catkin_package(
     INCLUDE_DIRS include lib src config
     LIBRARIES morus_control
@@ -41,8 +46,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   lib
 )
-
-#link_directories(lib)
 
 install(DIRECTORY config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
@@ -97,7 +100,11 @@ add_library(attitude_teleop_joy
         include/morus_control/attitude_teleop_joy.h)
 
 add_executable(mass_ctl_attitude_mpc_node
-        src/nodes/mass_ctl_attitude_mpc_node.cpp)
+        src/nodes/mass_ctl_attitude_mpc_node.cpp
+        )
+
+add_dependencies(mass_ctl_attitude_mpc_node
+        ${PROJECT_NAME}_gencfg)
 
 target_link_libraries(mass_ctl_attitude_mpc_node
         ${catkin_LIBRARIES}
