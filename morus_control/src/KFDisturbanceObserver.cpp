@@ -75,29 +75,6 @@ bool KFDisturbanceObserver::updateEstimator() {
     return false;
 
   ROS_INFO_ONCE("KF is updated for first time.");
-  /*
-  static ros::Time t_previous = ros::Time::now();
-  static bool do_once = true;
-  double dt;
-
-  if (do_once) {
-    dt = 0.01;
-    do_once = false;
-  } else {
-    ros::Time t0 = ros::Time::now();
-    dt = (t0 - t_previous).toSec();
-    t_previous = t0;
-  }
-
-  //check that dt is not so different from 0.01
-  if (dt > 0.015) {
-    dt = 0.015;
-  }
-
-  if (dt < 0.005) {
-    dt = 0.005;
-  }
-  */
 
   // P_k^- = F_(k-1) * P_(k-1)^+ * F_(k-1)^T + process_noise_covariance(Q_(k-1))
   state_covariance_ = F_ * state_covariance_ * F_.transpose();
