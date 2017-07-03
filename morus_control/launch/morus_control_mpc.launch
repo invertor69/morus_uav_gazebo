@@ -2,6 +2,7 @@
 <launch>
     <arg name="namespace" default="/morus"/>
     <arg name="attitude_ctrl_flag" default="true"/>
+    <arg name="MPC_control_run" default="true"/>
 
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find morus_control)/config/morus_control.yaml" command="load"/>
@@ -35,12 +36,13 @@
             <remap from="/robot_description" to="$(arg namespace)/robot_description"/>
         </node>
 
-        <!-- attitude MPC control -->
-        <!-- debugging purposes !!!!!!!!!!!!
-        <node pkg="morus_control" type="mass_ctl_attitude_mpc_node" name="mass_ctl_attitude_mpc"
-              output="screen" ns="$(arg namespace)">
-        </node>
-        -->
+        <group if="$(arg MPC_control_run)">
+            <!-- attitude MPC control -->
+            <node pkg="morus_control" type="mass_ctl_attitude_mpc_node" name="mass_ctl_attitude_mpc"
+                  output="screen" ns="$(arg namespace)">
+            </node>
+        </group>
+
     </group>
 
 

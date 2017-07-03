@@ -13,6 +13,8 @@
     <arg name="enable_ground_truth" default="true"/>
     <arg name="log_file" default="morus"/>
 
+    <arg name="MPC_control_run" default="true"/>
+
     <arg name="joy_config" default="attack3"/>
 
     <!-- for gazebo not to crash -->
@@ -34,14 +36,9 @@
     <include file="$(find morus_gazebo)/launch/spawn_morus_multirotor.launch" />
 
     <!-- start control stack -->
-    <include file="$(find morus_control)/launch/morus_control_mpc.launch"/>
-
-    <!-- Here starts joystick -->
-    <!--
-      <include file="$(find morus_joy)/launch/morus_joy_teleop.launch">
-        <arg name="joy_config" value="$(arg joy_config)" />
-      </include>
-    -->
+    <include file="$(find morus_control)/launch/morus_control_mpc.launch">
+        <arg name="MPC_control_run" value="$(arg MPC_control_run)"/>
+    </include>
 
     <!-- GUI for debuging and control -->
     <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"> </node>
