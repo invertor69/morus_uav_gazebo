@@ -68,7 +68,7 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
   additional_row_MM.setZero();
   additional_row_MM(0) =  r_command_(0);
   additional_row_MM(2) = -r_command_(1);
-  additional_row_MM(kStateSize + kInputSize) = 0.1;
+  additional_row_MM(kStateSize + kInputSize) = 0.001;
 
   left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, Eigen::MatrixXd::Zero(kStateSize, 1),
       C, Eigen::MatrixXd::Zero(kMeasurementSize, kInputSize+1),
