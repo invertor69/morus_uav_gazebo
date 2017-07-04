@@ -39,7 +39,7 @@ namespace mav_control_attitude {
     constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
     constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
     constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-    constexpr int kDisturbanceSize = 6; // [theta, dtheta] -> B_d is [6,2]
+    constexpr int kDisturbanceSize = 6; // [theta, dtheta] -> B_d is [6,6]
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
@@ -95,6 +95,11 @@ class MPCAttitudeController {
     void setIntegratorConstantMPC(double K_I_MPC_angle)
     {
       K_I_MPC_angle_ = K_I_MPC_angle;
+    }
+
+    void setPenaltyMovingMasses(double q_p0, double q_v0, double q_p1, double q_v1)
+    {
+      q_moving_masses_ << q_p0, q_v0, q_p1, q_v1;
     }
 
     void setAngularVelocityState(double angular_velocity)

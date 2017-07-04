@@ -54,18 +54,13 @@ class KFDisturbanceObserver
                        double movable_mass_1_position, double movable_mass_1_speed,
                        double angle, double angular_velocity)
   {
+    state_.setZero(); // disturbances set to 0
     state_(0) = movable_mass_0_position;
     state_(1) = movable_mass_0_speed;
     state_(2) = movable_mass_1_position;
     state_(3) = movable_mass_1_speed;
     state_(4) = angle;
     state_(5) = angular_velocity;
-    state_(6) = 0.0; // disturbance
-    state_(7) = 0.0; // disturbance
-    state_(8) = 0.0; // disturbance
-    state_(9) = 0.0; // disturbance
-    state_(10) = 0.0; // disturbance
-    state_(11) = 0.0; // disturbance
 
     // reset state_covariance_
     state_covariance_ = initial_state_covariance_.asDiagonal();

@@ -28,7 +28,7 @@ namespace mav_control_attitude {
               */
               // MM_MPC parameters for controller
               q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(10.0, 0.0),
+              q_attitude_(10.0, 0.0), // LQR had 10.0
               r_command_(1.0, 1.0), // LQR had 1.0
               r_delta_command_(0.01, 0.01)
     {
@@ -338,7 +338,6 @@ namespace mav_control_attitude {
         if (!getControllerName().compare("Roll controller") && verbose_){
           ROS_INFO_STREAM("estimated disturbances: \n" << estimated_disturbances_);
         }
-
       } else {
         estimated_disturbances_.setZero();
       }

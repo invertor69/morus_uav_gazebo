@@ -70,9 +70,10 @@ namespace mav_control_attitude {
     void MPCAttitudeControllerNode::DynConfigCallback(morus_control::MPCAttitudeControllerConfig &config,
                                                       uint32_t level)
     {
-        ROS_INFO_STREAM(config.K_I_MPC);
         linear_mpc_roll_.setIntegratorConstantMPC(config.K_I_MPC);
         linear_mpc_pitch_.setIntegratorConstantMPC(config.K_I_MPC);
+
+        //linear_mpc_roll_.setPenaltyMovingMasses(config.q_p0);
     }
 
     void MPCAttitudeControllerNode::AhrsCallback(const sensor_msgs::Imu &msg) {
