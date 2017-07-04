@@ -102,6 +102,21 @@ class MPCAttitudeController {
       q_moving_masses_ << q_p0, q_v0, q_p1, q_v1;
     }
 
+    void setPenaltyAttitude(double q_theta, double q_omega)
+    {
+      q_attitude_ << q_theta, q_omega;
+    }
+
+    void setPenaltyCommand(double r_0, double r_1)
+    {
+      r_command_ << r_0, r_1;
+    }
+
+    void setPenaltyChangeCommand(double r_delta_0, double r_delta_1)
+    {
+    r_delta_command_ << r_delta_0, r_delta_1;
+    }
+
     void setAngularVelocityState(double angular_velocity)
     {
       angular_velocity_ = angular_velocity;

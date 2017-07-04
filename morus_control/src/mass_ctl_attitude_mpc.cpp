@@ -17,7 +17,7 @@ namespace mav_control_attitude {
               angle_error_integration_(0.0),
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
-              verbose_(false),
+              verbose_(false)
               // CC_MPC
               /*
               q_moving_masses_(1, 1, 1, 1),
@@ -26,11 +26,6 @@ namespace mav_control_attitude {
               r_command_(1, 1, 1, 1),
               r_delta_command_(1, 1, 1, 1)
               */
-              // MM_MPC parameters for controller
-              q_moving_masses_(0.0, 0.0, 0.0, 0.0),
-              q_attitude_(10.0, 0.0), // LQR had 10.0
-              r_command_(1.0, 1.0), // LQR had 1.0
-              r_delta_command_(0.01, 0.01)
     {
      initializeParameters(); // init the system and its parameters
 

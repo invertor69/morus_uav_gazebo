@@ -22,7 +22,7 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
 {
     // P_k
     initial_state_covariance_.setOnes();
-    initial_state_covariance_ *= 3.0; // TODO outside parameter
+    initial_state_covariance_ *= 5.0; // TODO outside parameter
     state_covariance_.setZero();
 
     // x_k
