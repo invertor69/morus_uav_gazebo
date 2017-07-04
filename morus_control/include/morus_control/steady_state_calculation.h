@@ -80,7 +80,7 @@ class SteadyStateCalculation
   ros::NodeHandle nh_, private_nh_, controller_nh_;
   bool initialized_params_; // flag to indicate ih the params have been initialized
   Eigen::Matrix<double, kStateSize, kDisturbanceSize> Bd_;
-  Eigen::Matrix<double, kStateSize + kInputSize + 1, kStateSize + kMeasurementSize + 1> pseudo_inverse_left_hand_side_;
+  Eigen::Matrix<double, kStateSize + kInputSize, kStateSize + kMeasurementSize> pseudo_inverse_left_hand_side_;
   bool verbose_; // debugging variable
 
   Eigen::Vector2d r_command_;

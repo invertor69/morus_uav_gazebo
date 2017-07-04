@@ -71,7 +71,7 @@ namespace mav_control_attitude {
         Iq_(0,0) = Iq_xx;
         Iq_(1,1) = Iq_yy;
         Iq_(2,2) = Iq_zz;
-        Iyy_b_ = 8.3;
+        Iyy_b_ = 5.5268;
         Iyy_ = Iyy_b_ + 2*mass_*pow(lm_/2, 2);
 
         Tgm_ = 0.2;
@@ -363,8 +363,7 @@ namespace mav_control_attitude {
 
         // TODO magic number gain
         Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
-        K_I_MPC.Ones();
-        K_I_MPC *= 0.4;
+        K_I_MPC.Zero();
         K_I_MPC(4) = K_I_MPC_angle_;
         estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
