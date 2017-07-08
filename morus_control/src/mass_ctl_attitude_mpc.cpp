@@ -46,6 +46,7 @@ namespace mav_control_attitude {
  */
     void MPCAttitudeController::initializeParameters()
     {
+        // TODO throw in .yaml file !!!
         mass_ = 1.0;
         mass_quad_ = 30.8;
         M_ = mass_quad_ + 4 * mass_;
@@ -166,7 +167,7 @@ namespace mav_control_attitude {
         // "Model predictive control for Trajectory Tracking of Unmanned Aerial Vehicles Using Robot Operating System"
         Eigen::MatrixXd integral_exp_A;
         integral_exp_A = Eigen::MatrixXd::Zero(kStateSize, kStateSize);
-        const int count_integral_A = 100;
+        const int count_integral_A = 1000; // TODO see why that size
 
         // discrete integration
         for (int i = 0; i < count_integral_A; i++) {
@@ -192,7 +193,7 @@ namespace mav_control_attitude {
         settings_ = settings;
         params_ = params;
         settings_.verbose = 0; // don't show every outcome of computation
-        settings_.max_iters = 5;  // reduce the maximum iteration count, from 25.
+        settings_.max_iters = 5;  // reduce the maximum iteration count, to assure quickness over accuracy.
 
         // parameters A, B, Bd for CVXGEN set
         Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.A), kStateSize, kStateSize) =        model_A_;
@@ -348,10 +349,9 @@ namespace mav_control_attitude {
         angle_error_integration_ = angle_error_integration_.cwiseMax(-integration_limits);
         angle_error_integration_ = angle_error_integration_.cwiseMin(integration_limits);
 
-        // TODO magic number gain
         Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
         K_I_MPC.Zero();
-        K_I_MPC(4) = K_I_MPC_angle_;
+        K_I_MPC(4) = K_I_MPC_angle_; // set by dynamic reconfigure
         estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
 
