@@ -86,12 +86,6 @@ namespace mav_control_attitude {
         w_mm_ = 14.8508;
         */
 
-        // parameters gotten from simulation
-        /*
-        zeta_mm_ = 0.5755;
-        w_mm_ = 5.8205;
-        */
-
         // close true parameters proven with simulation
         // tm = 0.21 s, sigma_m = 0.065944
         zeta_mm_ = 0.6544;
@@ -151,17 +145,13 @@ namespace mav_control_attitude {
         A_continous_time(3,2) = -pow(w_mm_,2);
         A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
         A_continous_time(4,5) = 1.0;
-        //A_continous_time(5,0) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
         A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
         A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
-        //A_continous_time(5,2) = 1.72 * mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
         A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
         A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
 
         B_continous_time(1,0) = pow(w_mm_,2);
         B_continous_time(3,1) = pow(w_mm_,2);
-        //B_continous_time(5,0) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        //B_continous_time(5,1) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
         B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
         B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
