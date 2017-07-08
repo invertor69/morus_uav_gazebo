@@ -22,19 +22,20 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
 {
     // P_k
     initial_state_covariance_.setOnes();
-    initial_state_covariance_ *= 5.0; // TODO outside parameter
+    initial_state_covariance_ *= 10.0; // TODO outside parameter
     state_covariance_.setZero();
 
     // x_k
     state_.setZero();
 
     // Q_k
-    process_noise_covariance_.setIdentity();
-    process_noise_covariance_ *= 0.5; // TODO outside parameter
+    process_noise_covariance_.setZero(); // TODO outside parameter
+    process_noise_covariance_(4,4) = 8.0;
+    process_noise_covariance_(5,5) = 8.0;
 
     // R_k
     measurement_covariance_.setIdentity();
-    measurement_covariance_ *= 0.5; // TODO outside parameter
+    measurement_covariance_ *= 1.5; // TODO outside parameter
 
     initialized_ = true;
     ROS_INFO("Kalman Filter Initialized!");
