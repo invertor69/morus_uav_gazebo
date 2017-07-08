@@ -17,7 +17,9 @@ namespace mav_control_attitude {
               angle_error_integration_(0.0),
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
-              verbose_(false)
+              verbose_(false),
+              sampling_time_(0.01),
+              prediction_sampling_time_(0.01)
               // CC_MPC
               /*
               q_moving_masses_(1, 1, 1, 1),

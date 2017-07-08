@@ -44,11 +44,6 @@ namespace mav_control_attitude {
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
 
-    // sampling time parameters
-    constexpr double sampling_time_ = 0.1;
-    constexpr double prediction_sampling_time_ = 0.1;
-    // TODO prebacit u YAML FILE pa da se dobije sa get_param
-
 
 class MPCAttitudeController {
  public:
@@ -254,6 +249,11 @@ class MPCAttitudeController {
 
     // controller gains
     double K_I_MPC_angle_;
+
+    // TODO prebacit u YAML FILE pa da se dobije sa get_param
+    // sampling time parameters
+    double sampling_time_;
+    double prediction_sampling_time_;
 };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_H
