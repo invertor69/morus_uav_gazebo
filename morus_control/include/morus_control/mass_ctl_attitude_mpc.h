@@ -82,6 +82,12 @@ class MPCAttitudeController {
       }
     }
 
+    void setMotorState(double motor_0_speed, double motor_1_speed)
+    {
+      motor_0_speed_ = motor_0_speed - w_gm_0_; // linearization around hovering speed
+      motor_1_speed_ = motor_1_speed - w_gm_0_;
+    }
+
     void setAngleState(double angle)
     {
       angle_ = angle;
@@ -153,6 +159,8 @@ class MPCAttitudeController {
     double movable_mass_0_speed_;
     double movable_mass_1_position_;
     double movable_mass_1_speed_;
+    double motor_0_speed_;
+    double motor_1_speed_;
     double angle_;
     double angular_velocity_;
 

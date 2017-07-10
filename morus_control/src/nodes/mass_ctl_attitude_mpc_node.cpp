@@ -63,6 +63,8 @@ namespace mav_control_attitude {
         // position of mass 3
         movable_mass_3_state_subscriber_= nh_.subscribe("movable_mass_3_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass3Callback, this);
         movable_mass_3_state_received_ = false;
+        motor_speed_subscriber_ = nh_.subscribe("motor_speed", 1, &MPCAttitudeControllerNode::MotorSpeedCallback, this);
+        motor_speed_received_ = false;
     }
 
     MPCAttitudeControllerNode::~MPCAttitudeControllerNode() {
@@ -228,6 +230,16 @@ namespace mav_control_attitude {
       movable_mass_3_state_received_ = true;
     }
 
+    void MPCAttitudeControllerNode::MotorSpeedCallback(const mav_msgs::Actuators &msg) {
+      motor_0_speed_ = -msg.angular_velocities.data()[0];
+      motor_1_speed_ =  msg.angular_velocities.data()[1];
+      motor_2_speed_ = -msg.angular_velocities.data()[2];
+      motor_3_speed_ =  msg.angular_velocities.data()[3];
+      linear_mpc_pitch_.setMotorState(motor_0_speed_, motor_2_speed_);
+      linear_mpc_roll_.setMotorState( motor_1_speed_, motor_3_speed_);
+      motor_speed_received_ = true; // acknowledgement of receiving message
+    }
+
     bool MPCAttitudeControllerNode::calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands,
                                                             MPCAttitudeController *linear_mpc_commanded_angle) {
       Eigen::Matrix<double, kInputSize, 1> calculated_control_commands;
@@ -280,7 +292,8 @@ namespace mav_control_attitude {
            // if all the measurements are received
            if (imu_received_ &&
                movable_mass_0_state_received_ && movable_mass_1_state_received_ &&
-               movable_mass_2_state_received_ && movable_mass_3_state_received_) {
+               movable_mass_2_state_received_ && movable_mass_3_state_received_ &&
+               motor_speed_received_) {
 
                calculateCommands(); // calculate the output
                publishCommands(); // send the received commands to output
@@ -291,6 +304,7 @@ namespace mav_control_attitude {
                movable_mass_1_state_received_ = false;
                movable_mass_2_state_received_ = false;
                movable_mass_3_state_received_ = false;
+               motor_speed_received_          = false;
            }
 
            // go to another anotation and keep the sampling time

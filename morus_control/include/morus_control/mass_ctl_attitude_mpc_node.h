@@ -9,6 +9,7 @@
 #include "sensor_msgs/Imu.h"
 #include "rosgraph_msgs/Clock.h"
 #include "control_msgs/JointControllerState.h" // for moving masses states
+#include <mav_msgs/Actuators.h> // for motor speed states
 #include "morus_msgs/CommandMovingMasses.h"
 #include "morus_msgs/AngleAndAngularVelocity.h"
 
@@ -108,6 +109,14 @@ namespace mav_control_attitude {
             double movable_mass_3_position_;
             double movable_mass_3_speed_;
             bool movable_mass_3_state_received_;
+
+        ros::Subscriber motor_speed_subscriber_;
+            void MotorSpeedCallback(const mav_msgs::Actuators& msg);
+            double motor_0_speed_;
+            double motor_1_speed_;
+            double motor_2_speed_;
+            double motor_3_speed_;
+            bool motor_speed_received_;
 
         // debug info
         bool verbose_;
