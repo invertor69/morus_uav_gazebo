@@ -14,8 +14,7 @@
     <arg name="log_file" default="morus"/>
 
     <arg name="MPC_control_run" default="true"/>
-
-    <arg name="joy_config" default="attack3"/>
+    <arg name="joy_control" default="false"/>
 
     <!-- for gazebo not to crash -->
     <!--
@@ -44,7 +43,8 @@
     <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"> </node>
 
     <!-- Joystick reading -->
-    <!--
-    <node pkg="joy" type="joy_node" name="joy_node"> </node>
-    -->
+    <group if="$(arg joy_control)">
+        <node pkg="joy" type="joy_node" name="joy_node"> </node>
+    </group>
+
 </launch>

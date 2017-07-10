@@ -19,6 +19,8 @@ namespace mav_control_attitude {
        ros::Publisher euler_ref_pub_;
        ros::Subscriber joy_sub_;
 
+       double angle_amplitude_max_;  // maximum angle allowed in control
+
        void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
   };
 }
