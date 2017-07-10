@@ -287,10 +287,10 @@ namespace mav_control_attitude {
       }
     }
 
-    void MPCAttitudeController::calculateMovingMassesCommand(
-        Eigen::Matrix<double, 2, 1>* moving_mass_ref)
+    void MPCAttitudeController::calculateControlCommand(
+        Eigen::Matrix<double, kInputSize, 1> *control_commands)
     {
-      assert(moving_mass_ref != nullptr);
+      assert(control_commands != nullptr);
       assert(initialized_parameters_);
 
       //Declare variables
@@ -308,7 +308,7 @@ namespace mav_control_attitude {
       disturbance_observer_.setMeasuredStates(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
                                               angle_, angular_velocity_);
-      disturbance_observer_.setMovingMassCommand(moving_mass_ref_temp_);
+      disturbance_observer_.setMovingMassCommand(control_commands_temp_);
 
       bool observer_update_successful = disturbance_observer_.updateEstimator();
 
@@ -411,10 +411,10 @@ namespace mav_control_attitude {
       for (int i = 1; i < kPredictionHorizonSteps; i++) {
         Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params_.x_ss[i])) = target_state;
       }
-      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_ss)) = target_input;
-      Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0)) = current_state;
-      Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  )) = estimated_disturbances_;
-      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = moving_mass_ref_temp_;
+      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_ss))   = target_input;
+      Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0))    = current_state;
+      Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  ))    = estimated_disturbances_;
+      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = control_commands_temp_;
 
       // fill the extern structure for the solver
       settings = settings_;
@@ -427,30 +427,30 @@ namespace mav_control_attitude {
       solver_status_msg.data = solver_status_;
       MPC_solver_status_pub_.publish(solver_status_msg);
 
-      moving_mass_ref_temp_.setZero(); // reset the msg for input signals
+      control_commands_temp_.setZero(); // reset the msg for input signals
       if (solver_status_ >= 0){ // solution found
-        moving_mass_ref_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
+        control_commands_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
       }
       else { // solution not found -> LQR working
         ROS_WARN("Linear MPC: Solver failed, use LQR backup");
-        Eigen::Matrix<double, 2,1> K_I;
+        Eigen::Matrix<double, kInputSize, 1> K_I;
         K_I(0) = 1.5; // TODO magic number to look at, integrator constant
         K_I(1) = 1.5;
 
         // CALCULATING FEEDBACK WITH LQR !!!!!!
         error_states = target_state - current_state;
-        moving_mass_ref_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
+        control_commands_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
       }
 
       // command min limits
-      Eigen::Vector2d lower_limits_roll;
+      Eigen::Matrix<double, kInputSize, 1> lower_limits_roll;
       lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
-      moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMax(lower_limits_roll);
+      control_commands_temp_ = control_commands_temp_.cwiseMax(lower_limits_roll);
 
       // command max limits
       Eigen::Vector2d upper_limits_roll;
       upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
-      moving_mass_ref_temp_ = moving_mass_ref_temp_.cwiseMin(upper_limits_roll);
-      *moving_mass_ref = moving_mass_ref_temp_;
+      control_commands_temp_ = control_commands_temp_.cwiseMin(upper_limits_roll);
+      *control_commands = control_commands_temp_;
     }
 }

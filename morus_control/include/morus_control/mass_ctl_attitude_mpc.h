@@ -39,7 +39,7 @@ namespace mav_control_attitude {
     constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
     constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
     constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-    constexpr int kDisturbanceSize = 6; // [theta, dtheta] -> B_d is [6,6]
+    constexpr int kDisturbanceSize = 6; // [x1, dx1, x3, dx3, theta, dtheta] -> B_d is [6,6]
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
@@ -54,7 +54,7 @@ class MPCAttitudeController {
     void applyParameters();
 
     // compute control input
-    void calculateMovingMassesCommand(Eigen::Vector2d* moving_mass_ref);
+    void calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands);
 
 
     // setters
@@ -232,7 +232,7 @@ class MPCAttitudeController {
 
     // backup LQR
     Eigen::MatrixXd LQR_K_;
-    Eigen::Vector2d moving_mass_ref_temp_;
+    Eigen::Matrix<double, kInputSize, 1> control_commands_temp_;
 
     // CVXGEN solver parameters (needed if more MPC's are used)
     Params params_;

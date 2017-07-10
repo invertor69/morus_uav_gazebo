@@ -228,17 +228,17 @@ namespace mav_control_attitude {
       movable_mass_3_state_received_ = true;
     }
 
-    bool MPCAttitudeControllerNode::calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
-                                                                 MPCAttitudeController* linear_mpc_commanded_angle) {
-      Eigen::Matrix<double, 2, 1> moving_mass_ref;
-      (*linear_mpc_commanded_angle).calculateMovingMassesCommand(&moving_mass_ref);
-      *moving_masses_command = moving_mass_ref;
+    bool MPCAttitudeControllerNode::calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands,
+                                                            MPCAttitudeController *linear_mpc_commanded_angle) {
+      Eigen::Matrix<double, kInputSize, 1> calculated_control_commands;
+      (*linear_mpc_commanded_angle).calculateControlCommand(&calculated_control_commands);
+      *control_commands = calculated_control_commands;
       return true;
     }
 
     bool MPCAttitudeControllerNode::calculateCommands() {
 
-        // set the data to the controllers
+        // set the data to the controllers - angles and angular velocities
         linear_mpc_roll_.setAngleState(euler_mv_.x);
         linear_mpc_roll_.setAngularVelocityState(euler_rate_mv_.x);
 
@@ -246,19 +246,19 @@ namespace mav_control_attitude {
         linear_mpc_pitch_.setAngularVelocityState(euler_rate_mv_.y);
 
         // calculate the control signals - MAIN ALGORITHM !!!!!
-        calculateMovingMassesCommand(&mass_roll_commands_, &linear_mpc_roll_);
-        calculateMovingMassesCommand(&mass_pitch_commands_, &linear_mpc_pitch_);
+        calculateControlCommand(&roll_commands_, &linear_mpc_roll_);
+        calculateControlCommand(&pitch_commands_,&linear_mpc_pitch_);
     }
 
     void MPCAttitudeControllerNode::publishCommands() {
-        assert(mass_pitch_commands_.data());
-        assert(mass_roll_commands_.data());
+        assert(pitch_commands_.data());
+        assert(roll_commands_.data());
 
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
-        mass0_command_msg.data =  mass_pitch_commands_(0);
-        mass1_command_msg.data = -mass_roll_commands_(0);
-        mass2_command_msg.data = -mass_pitch_commands_(1);
-        mass3_command_msg.data =  mass_roll_commands_(1);
+        mass0_command_msg.data =  pitch_commands_(0);
+        mass1_command_msg.data = -roll_commands_(0);
+        mass2_command_msg.data = -pitch_commands_(1);
+        mass3_command_msg.data =  roll_commands_(1);
 
         // publish the new references for the masses
         pub_mass0_.publish(mass0_command_msg);
@@ -269,7 +269,8 @@ namespace mav_control_attitude {
 
     void MPCAttitudeControllerNode::run() {
 
-        // define sampling time
+      // define sampling time
+      // needs to be set in the controller as well, change to be unique !!! TODO
       double sampling_time = 0.01;
       ros::Rate loop_rate(1.0 / sampling_time); // 10 Hz -> Ts = 0.1 s
 

@@ -20,6 +20,7 @@
 #include <morus_control/MPCAttitudeControllerConfig.h>
 
 namespace mav_control_attitude {
+
     class MPCAttitudeControllerNode{
 
     public:
@@ -39,8 +40,8 @@ namespace mav_control_attitude {
         void DynConfigCallback(morus_control::MPCAttitudeControllerConfig &config, uint32_t level);
 
         // calculation of the future input signals
-        virtual bool calculateMovingMassesCommand(Eigen::Matrix<double, 2, 1>* moving_masses_command,
-                                                  MPCAttitudeController* linear_mpc_commanded_angle);
+        virtual bool calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands,
+                                             MPCAttitudeController *linear_mpc_commanded_angle);
         bool calculateCommands();
 
         // publishers
@@ -52,9 +53,9 @@ namespace mav_control_attitude {
         void publishCommands();
         // debugging publisher
         ros::Publisher pub_angle_state_;
-        // variables to hold the setpoints for the moving masses
-        Eigen::Matrix<double, 2, 1> mass_roll_commands_;
-        Eigen::Matrix<double, 2, 1> mass_pitch_commands_;
+        // variables to hold the control variable
+        Eigen::Matrix<double, kInputSize, 1> roll_commands_;
+        Eigen::Matrix<double, kInputSize, 1> pitch_commands_;
         bool start_flag_;
 
         // subscribers

@@ -12,12 +12,9 @@
 
 namespace mav_control_attitude {
 
-
-
 class KFDisturbanceObserver
 {
  private:
-
   static constexpr int kStateSize = 6;
   static constexpr int kMeasurementSize = 1;
   static constexpr int kDisturbanceSize = 6;
