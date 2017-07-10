@@ -110,6 +110,10 @@ namespace mav_control_attitude {
 
         // debug info
         bool verbose_;
+
+        // variable for reference setting
+        bool automatic_reference_;
+        void setAutomaticReference();
     };
 }
 #endif //PROJECT_MASS_CTL_ATTITUDE_MPC_NODE_H

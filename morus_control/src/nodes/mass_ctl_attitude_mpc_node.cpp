@@ -10,6 +10,7 @@ namespace mav_control_attitude {
               attitude_joy_(nh_, private_nh_),
               dyn_config_server_(private_nh_),
               start_flag_(false),  // flag for the first measurement
+              automatic_reference_(false),
               verbose_(false)
     {
         // init the readings od moving mass sensors
@@ -172,6 +173,24 @@ namespace mav_control_attitude {
         euler_sp_ = msg;
         linear_mpc_roll_.setAngleRef(msg.x);
         linear_mpc_pitch_.setAngleRef(msg.y);
+
+        if (automatic_reference_){
+            setAutomaticReference();
+        }
+    }
+
+    void MPCAttitudeControllerNode::setAutomaticReference() {
+        static ros::Time t_previous = ros::Time::now();
+        static double angle_sp_pitch = 0.1;
+
+        ros::Time t0 = ros::Time::now();
+        double dt = (t0 - t_previous).toSec();
+
+        if (dt > 6.0){
+            angle_sp_pitch *= -1; // change the reference polarity (+, -, +, -, ...)
+            t_previous = t0;
+        }
+        linear_mpc_pitch_.setAngleRef(angle_sp_pitch);
     }
 
     void MPCAttitudeControllerNode::ClockCallback(const rosgraph_msgs::Clock &msg) {
