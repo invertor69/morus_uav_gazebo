@@ -86,6 +86,14 @@ class MPCAttitudeController {
     {
       motor_0_speed_ = motor_0_speed - w_gm_0_; // linearization around hovering speed
       motor_1_speed_ = motor_1_speed - w_gm_0_;
+
+      if (!getControllerName().compare("Pitch controller")){
+        std_msgs::Float64MultiArray motor_msg;
+        motor_msg.data.clear();
+        motor_msg.data.push_back(motor_0_speed_);
+        motor_msg.data.push_back(motor_1_speed_);
+        rotor_velocities_linearizes_pub_.publish(motor_msg);
+      }
     }
 
     void setAngleState(double angle)
@@ -146,6 +154,7 @@ class MPCAttitudeController {
     ros::Publisher target_input_pub_;
     ros::Publisher disturbances_pub_;
     ros::Publisher MPC_solver_status_pub_;
+    ros::Publisher rotor_velocities_linearizes_pub_;
 
     //initialize system
     void initializeParameters();

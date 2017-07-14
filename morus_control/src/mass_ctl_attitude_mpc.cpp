@@ -36,6 +36,7 @@ namespace mav_control_attitude {
      target_input_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/target_input/",  1);
      disturbances_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("mpc/disturbances/",  1);
      MPC_solver_status_pub_ = nh_.advertise<std_msgs::Int64>("mpc/solver_status/", 1);
+     rotor_velocities_linearizes_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("motor_speed_lin/", 1);
     }
 
     MPCAttitudeController::~MPCAttitudeController() { }
