@@ -67,47 +67,35 @@ add_library(cvxgen_solver_moving_masses
 )
 
 # general algorithm for executing
-add_library(mass_ctl_attitude_mpc
-        src/mass_ctl_attitude_mpc.cpp
+add_library(attitude_ctl_mpc
+        src/attitude_mpc_ctl.cpp
         src/steady_state_calculation.cpp
         src/KFDisturbanceObserver.cpp
         lib/solver.c
 )
 
-add_dependencies(mass_ctl_attitude_mpc
+add_dependencies(attitude_ctl_mpc
         cvxgen_solver_moving_masses
 )
 
-target_link_libraries(mass_ctl_attitude_mpc
+target_link_libraries(attitude_ctl_mpc
         cvxgen_solver_moving_masses
         ${catkin_LIBRARIES}
 )
-
-# target_include_directories(cvxgen_solver_moving_masses PUBLIC lib)
-
-#set(mass_ctl_attitude_mpc_node_SRCS
-#        src/nodes/mass_ctl_attitude_mpc_node.cpp
-#        # mass_ctl_attitude_mpc depends on steady_state_calculation
-#        src/mass_ctl_attitude_mpc.cpp
-#        src/steady_state_calculation.cpp src/KFDisturbanceObserver.cpp include/morus_control/KFDisturbanceObserver.h
-#        include/morus_control/mass_ctl_attitude_mpc.h
-#        include/morus_control/mass_ctl_attitude_mpc_node.h
-#        include/morus_control/steady_state_calculation.h
-#        )
 
 add_library(attitude_teleop_joy
         src/attitude_teleop_joy.cpp
         include/morus_control/attitude_teleop_joy.h)
 
-add_executable(mass_ctl_attitude_mpc_node
-        src/nodes/mass_ctl_attitude_mpc_node.cpp
+add_executable(attitude_mpc_ctl_node
+        src/nodes/attitude_mpc_ctl_node.cpp
         )
 
-add_dependencies(mass_ctl_attitude_mpc_node
+add_dependencies(attitude_mpc_ctl_node
         ${PROJECT_NAME}_gencfg)
 
-target_link_libraries(mass_ctl_attitude_mpc_node
+target_link_libraries(attitude_mpc_ctl_node
         ${catkin_LIBRARIES}
-        mass_ctl_attitude_mpc
+        attitude_ctl_mpc
         cvxgen_solver_moving_masses
         attitude_teleop_joy)

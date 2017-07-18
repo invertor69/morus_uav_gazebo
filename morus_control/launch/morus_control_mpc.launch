@@ -13,6 +13,7 @@
 
     <node pkg="morus_control" type="height_yaw_ctl.py" name="height_ctl" output="screen"  ns="$(arg namespace)">
         <param name="gm_attitude_ctl" value="0"/>
+        <remap from="/gazebo/command/motor_speed" to="$(arg namespace)/command/height/motor_speed" />
     </node>
 
     <node pkg="morus_control" type="float2gmStatus.py" name="translator" ns="$(arg namespace)"/>
@@ -38,7 +39,7 @@
 
         <group if="$(arg MPC_control_run)">
             <!-- attitude MPC control -->
-            <node pkg="morus_control" type="mass_ctl_attitude_mpc_node" name="mass_ctl_attitude_mpc"
+            <node pkg="morus_control" type="attitude_mpc_ctl_node" name="attitude_mpc_ctl"
                   output="screen" ns="$(arg namespace)">
             </node>
         </group>
@@ -47,7 +48,20 @@
 
 
     <!--
-    <node pkg="rosbag" type="record" name="rosbag_rec" args="/morus/sensors/pose1 /morus/velocity /morus/imu /morus/euler /morus/movable_mass_0_position_controller/state /morus/movable_mass_1_position_controller/state/morus/movable_mass_1_position_controller/state /morus/movable_mass_3_position_controller/state /morus/pid_roll_rate /morus/pid_roll /morus/pid_pitch_rate /morus/pid_pitch /morus/pid_z /morus/pid_vz"
+    <node pkg="rosbag" type="record" name="rosbag_rec" args="/morus/sensors/pose1
+    /morus/velocity
+    /morus/imu
+    /morus/euler
+    /morus/movable_mass_0_position_controller/state
+    /morus/movable_mass_1_position_controller/state
+    /morus/movable_mass_2_position_controller/state
+    /morus/movable_mass_3_position_controller/state
+    /morus/pid_roll_rate
+    /morus/pid_roll
+    /morus/pid_pitch_rate
+    /morus/pid_pitch
+    /morus/pid_z
+    /morus/pid_vz"
      />
     -->
 </launch>

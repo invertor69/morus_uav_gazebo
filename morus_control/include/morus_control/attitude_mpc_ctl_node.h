@@ -13,7 +13,7 @@
 #include "morus_msgs/CommandMovingMasses.h"
 #include "morus_msgs/AngleAndAngularVelocity.h"
 
-#include "morus_control/mass_ctl_attitude_mpc.h"
+#include "morus_control/attitude_mpc_ctl.h"
 #include "morus_control/attitude_teleop_joy.h"
 
 // dynamic reconfigure files
@@ -50,10 +50,12 @@ namespace mav_control_attitude {
         ros::Publisher pub_mass1_;
         ros::Publisher pub_mass2_;
         ros::Publisher pub_mass3_;
-
-        void publishCommands();
+        ros::Publisher pub_rotors_;
         // debugging publisher
         ros::Publisher pub_angle_state_;
+
+        void publishCommands();
+
         // variables to hold the control variable
         Eigen::Matrix<double, kInputSize, 1> roll_commands_;
         Eigen::Matrix<double, kInputSize, 1> pitch_commands_;
@@ -117,6 +119,9 @@ namespace mav_control_attitude {
             double motor_2_speed_;
             double motor_3_speed_;
             bool motor_speed_received_;
+
+        ros::Subscriber motor_speed_height_subscriber_;
+            void MotorSpeedHeightCallback(const mav_msgs::Actuators& msg);
 
         // debug info
         bool verbose_;

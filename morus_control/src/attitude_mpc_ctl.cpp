@@ -3,7 +3,7 @@
 // master thesis
 // author: Luka Pevec
 
-#include <morus_control/mass_ctl_attitude_mpc.h>
+#include <morus_control/attitude_mpc_ctl.h>
 
 namespace mav_control_attitude {
     MPCAttitudeController::MPCAttitudeController(const ros::NodeHandle& nh,

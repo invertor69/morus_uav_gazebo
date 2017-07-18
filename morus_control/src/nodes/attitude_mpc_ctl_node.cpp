@@ -1,4 +1,4 @@
-#include <morus_control/mass_ctl_attitude_mpc_node.h>
+#include <morus_control/attitude_mpc_ctl_node.h>
 
 namespace mav_control_attitude {
     MPCAttitudeControllerNode::MPCAttitudeControllerNode(const ros::NodeHandle& nh,
@@ -44,6 +44,7 @@ namespace mav_control_attitude {
         pub_mass2_ = nh_.advertise<std_msgs::Float64>("movable_mass_2_position_controller/command", 1);
         pub_mass3_ = nh_.advertise<std_msgs::Float64>("movable_mass_3_position_controller/command", 1);
         pub_angle_state_ = nh_.advertise<morus_msgs::AngleAndAngularVelocity>("angles", 1);
+        pub_rotors_ = nh_.advertise<mav_msgs::Actuators>("/gazebo/command/motor_speed", 1);
 
         // Subscribers ( nh <- )
         imu_subscriber_ = nh_.subscribe("imu", 1, &MPCAttitudeControllerNode::AhrsCallback, this); // measured values info
@@ -63,8 +64,11 @@ namespace mav_control_attitude {
         // position of mass 3
         movable_mass_3_state_subscriber_= nh_.subscribe("movable_mass_3_position_controller/state", 1, &MPCAttitudeControllerNode::MovingMass3Callback, this);
         movable_mass_3_state_received_ = false;
+        // rotors angular velocities
         motor_speed_subscriber_ = nh_.subscribe("motor_speed", 1, &MPCAttitudeControllerNode::MotorSpeedCallback, this);
         motor_speed_received_ = false;
+        // rotors angular velocities sent from height controller
+        motor_speed_height_subscriber_ = nh_.subscribe("command/height/motor_speed", 1, &MPCAttitudeControllerNode::MotorSpeedHeightCallback, this);
     }
 
     MPCAttitudeControllerNode::~MPCAttitudeControllerNode() {
@@ -168,7 +172,6 @@ namespace mav_control_attitude {
         /// @details Referent motor velocity callback. (This should be published by height controller).
         /// @param msg: Type std_msgs::Float32
         w_sp_ = msg.data;
-
     }
 
     void MPCAttitudeControllerNode::EulerRefCallback(const geometry_msgs::Vector3 &msg) {
@@ -240,6 +243,12 @@ namespace mav_control_attitude {
       linear_mpc_pitch_.setMotorState(motor_0_speed_, motor_2_speed_);
       linear_mpc_roll_.setMotorState( motor_1_speed_, motor_3_speed_);
       motor_speed_received_ = true; // acknowledgement of receiving message
+    }
+
+    void MPCAttitudeControllerNode::MotorSpeedHeightCallback(const mav_msgs::Actuators &msg) {
+      // read the command sent from height controller
+      // forward the msg to the height controller
+      pub_rotors_.publish(msg);
     }
 
     bool MPCAttitudeControllerNode::calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands,
@@ -318,7 +327,7 @@ namespace mav_control_attitude {
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "mav_attitude_ctl_mpc");
+    ros::init(argc, argv, "attitude_mpc_ctl");
 
     // fully initialize the node
     ros::NodeHandle nh, private_nh("~");
