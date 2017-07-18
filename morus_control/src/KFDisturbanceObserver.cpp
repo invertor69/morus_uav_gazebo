@@ -30,8 +30,8 @@ KFDisturbanceObserver::KFDisturbanceObserver(const ros::NodeHandle& nh,
 
     // Q_k
     process_noise_covariance_.setZero(); // TODO outside parameter
-    process_noise_covariance_(4,4) = 8.0;
-    process_noise_covariance_(5,5) = 8.0;
+    process_noise_covariance_(4 +2*combined_control_mpc_use_,4 +2*combined_control_mpc_use_) = 8.0;
+    process_noise_covariance_(5 +2*combined_control_mpc_use_,5 +2*combined_control_mpc_use_) = 8.0;
 
     // R_k
     measurement_covariance_.setIdentity();
@@ -105,16 +105,24 @@ bool KFDisturbanceObserver::updateEstimator() {
   }
 
   Eigen::Matrix<double, kDisturbanceSize, 1> estimated_disturbances;
-  estimated_disturbances = state_.segment(6, kDisturbanceSize); // disturbances -> need to limit them !!
+  estimated_disturbances = state_.segment(kStateSize, kDisturbanceSize); // disturbances -> need to limit them !!
 
   // min limits
   Eigen::Matrix<double, kDisturbanceSize, 1> lower_limits;
-  lower_limits << -0.29, -2.0, -0.29, -2.0, -0.5, -2.0;
+  if (combined_control_mpc_use_) {
+    lower_limits << -0.29, -2.0, -0.29, -2.0, -20, -20, -0.5, -2.0;
+  } else {
+    lower_limits << -0.29, -2.0, -0.29, -2.0, -0.5, -2.0;
+  }
   estimated_disturbances = estimated_disturbances.cwiseMax(lower_limits);
 
   // max limits
   Eigen::Matrix<double, kDisturbanceSize, 1> upper_limits;
-  upper_limits << 0.29, 2.0, 0.29, 2.0, 0.5, 2.0;
+  if (combined_control_mpc_use_) {
+    upper_limits << 0.29, 2.0, 0.29, 2.0, 20, 20, 0.5, 2.0;
+  } else {
+    upper_limits << 0.29, 2.0, 0.29, 2.0, 0.5, 2.0;
+  }
   estimated_disturbances = estimated_disturbances.cwiseMin(upper_limits);
 
   // update state disturbances after the limits
@@ -126,7 +134,7 @@ bool KFDisturbanceObserver::updateEstimator() {
 void KFDisturbanceObserver::simulateSystem() {
   StateVector old_state;
   old_state = state_;
-  state_ = F_ * old_state + G_ * command_moving_masses_;
+  state_ = F_ * old_state + G_ * command_vector_;
 }
 
 void KFDisturbanceObserver::getEstimatedState(Eigen::VectorXd *estimated_state) const {

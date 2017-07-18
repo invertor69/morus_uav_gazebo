@@ -61,7 +61,7 @@ void SteadyStateCalculation::initialize(const Eigen::MatrixXd& A,
   Bd_ = Bd;
   Eigen::MatrixXd C(kMeasurementSize, kStateSize);
   C.setZero();
-  C(4) = 1.0; // measured only the angle
+  C(4 + 2*combined_control_mpc_use_) = 1.0; // measured only the angle
 
   left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B,
       C, Eigen::MatrixXd::Zero(kMeasurementSize, kInputSize);

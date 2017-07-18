@@ -73,6 +73,8 @@ namespace mav_control_attitude {
     void MPCAttitudeControllerNode::DynConfigCallback(morus_control::MPCAttitudeControllerConfig &config,
                                                       uint32_t level)
     {
+        automatic_reference_ = config.aut_ref;
+
         // integral component init
         linear_mpc_roll_.setIntegratorConstantMPC(config.K_I_MPC);
         linear_mpc_pitch_.setIntegratorConstantMPC(config.K_I_MPC);
@@ -82,16 +84,16 @@ namespace mav_control_attitude {
         linear_mpc_pitch_.setPenaltyMovingMasses(config.q_p0, config.q_v0, config.q_p1, config.q_v1);
 
         // q_attitude setup
-        linear_mpc_roll_.setPenaltyAttitude(config.q_theta, config.q_omega);
-        linear_mpc_pitch_.setPenaltyAttitude(config.q_theta, config.q_omega);
+        linear_mpc_roll_.setPenaltyAttitude(config.q_angle, config.q_angular_velocity);
+        linear_mpc_pitch_.setPenaltyAttitude(config.q_angle, config.q_angular_velocity);
 
         // r_command setup
-        linear_mpc_roll_.setPenaltyCommand(config.r_0, config.r_1);
-        linear_mpc_pitch_.setPenaltyCommand(config.r_0, config.r_1);
+        linear_mpc_roll_.setPenaltyCommand(config.r_mass_0, config.r_mass_1);
+        linear_mpc_pitch_.setPenaltyCommand(config.r_mass_0, config.r_mass_1);
 
         // r_delta_command setup
-        linear_mpc_roll_.setPenaltyChangeCommand(config.r_delta_0, config.r_delta_1);
-        linear_mpc_pitch_.setPenaltyChangeCommand(config.r_delta_0, config.r_delta_1);
+        linear_mpc_roll_.setPenaltyChangeCommand(config.r_delta_mass_0, config.r_delta_mass_1);
+        linear_mpc_pitch_.setPenaltyChangeCommand(config.r_delta_mass_0, config.r_delta_mass_1);
 
         // change the adequate matrices
         linear_mpc_roll_.applyParameters();
@@ -188,7 +190,7 @@ namespace mav_control_attitude {
         ros::Time t0 = ros::Time::now();
         double dt = (t0 - t_previous).toSec();
 
-        if (dt > 6.0){
+        if (dt > 7.0){
             angle_sp_pitch *= -1; // change the reference polarity (+, -, +, -, ...)
             t_previous = t0;
         }

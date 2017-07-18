@@ -41,18 +41,12 @@ namespace mav_control_attitude {
 class SteadyStateCalculation
 {
  public:
-  // CC_MPC
-  /*
-  static constexpr int kStateSize = 8;
-  static constexpr int kInputSize = 4;
-  static constexpr int kMeasurementSize = 3;
-  static constexpr int kDisturbanceSize = 2;
-  */
-  // MM_MPC
-  static constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
-  static constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
-  static constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-  static constexpr int kDisturbanceSize = 6; // [theta] -> B_d is [6,1]
+  static constexpr int combined_control_mpc_use_ = 0;
+
+  static constexpr int kStateSize = 6 + 2*combined_control_mpc_use_; // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
+  static constexpr int kInputSize = 2 + 2*combined_control_mpc_use_; // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
+  static constexpr int kMeasurementSize = 1;                         // [theta] -> C is [1,6]
+  static constexpr int kDisturbanceSize = kStateSize;                // [theta] -> B_d is [6,1]
 
   typedef const Eigen::Matrix<double, kDisturbanceSize, 1> EstimatedDisturbanceVector;
   typedef const Eigen::Matrix<double, kMeasurementSize, 1> ReferenceVector;
@@ -61,7 +55,7 @@ class SteadyStateCalculation
   ~SteadyStateCalculation();
 
   // Setters
-  void setRCommand (Eigen::Vector2d r_command)
+  void setRCommand (Eigen::Matrix<double, kInputSize, 1> r_command)
   {
     r_command_ = r_command;
   }
@@ -83,7 +77,7 @@ class SteadyStateCalculation
   Eigen::Matrix<double, kStateSize + kInputSize, kStateSize + kMeasurementSize> pseudo_inverse_left_hand_side_;
   bool verbose_; // debugging variable
 
-  Eigen::Vector2d r_command_;
+  Eigen::Matrix<double, kInputSize, 1> r_command_;
 
 };
 

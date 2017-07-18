@@ -15,14 +15,16 @@ namespace mav_control_attitude {
 class KFDisturbanceObserver
 {
  private:
-  static constexpr int kStateSize = 6;
+  static constexpr int combined_control_mpc_use_ = 0;  // still working with moving masses
+
+  static constexpr int kStateSize = 6 + 2*combined_control_mpc_use_;
+  static constexpr int kInputSize = 2 + 2*combined_control_mpc_use_;
   static constexpr int kMeasurementSize = 1;
-  static constexpr int kDisturbanceSize = 6;
-  static constexpr int kInputSize = 2;
-  static constexpr double kGravity = 9.8066;
+  static constexpr int kDisturbanceSize = kStateSize;
+  static constexpr double kGravity = 9.80665;
 
   static constexpr int kStateSizeKalman = kStateSize + kDisturbanceSize;
-  static constexpr int kMeasurementSizeKalman = kStateSize;
+  static constexpr int kMeasurementSizeKalman = kStateSize; // all the states are measurable
 
  public:
   KFDisturbanceObserver(const ros::NodeHandle& nh, const ros::NodeHandle& private_nh);
@@ -32,23 +34,29 @@ class KFDisturbanceObserver
   // Setting
   void setMeasuredStates(double movable_mass_0_position, double movable_mass_0_speed,
                          double movable_mass_1_position, double movable_mass_1_speed,
+                         double rotor_0_speed, double rotor_1_speed,
                          double angle, double angular_velocity)
   {
     measurements_(0) = movable_mass_0_position;
     measurements_(1) = movable_mass_0_speed;
     measurements_(2) = movable_mass_1_position;
     measurements_(3) = movable_mass_1_speed;
-    measurements_(4) = angle;
-    measurements_(5) = angular_velocity;
+    if (combined_control_mpc_use_){
+      measurements_(4) = rotor_0_speed;
+      measurements_(5) = rotor_1_speed;
+    }
+    measurements_(4 + 2*combined_control_mpc_use_) = angle;
+    measurements_(5 + 2*combined_control_mpc_use_) = angular_velocity;
   }
 
-  void setMovingMassCommand(Eigen::Vector2d command)
+  void setMovingMassCommand(Eigen::Matrix<double, kInputSize, 1> command)
   {
-    command_moving_masses_ = command;
+    command_vector_ = command;
   }
 
   void setInitialState(double movable_mass_0_position, double movable_mass_0_speed,
                        double movable_mass_1_position, double movable_mass_1_speed,
+                       double rotor_0_speed, double rotor_1_speed,
                        double angle, double angular_velocity)
   {
     state_.setZero(); // disturbances set to 0
@@ -56,8 +64,12 @@ class KFDisturbanceObserver
     state_(1) = movable_mass_0_speed;
     state_(2) = movable_mass_1_position;
     state_(3) = movable_mass_1_speed;
-    state_(4) = angle;
-    state_(5) = angular_velocity;
+    if (combined_control_mpc_use_) {
+      state_(4) = rotor_0_speed;
+      state_(5) = rotor_1_speed;
+    }
+    state_(4 + 2*combined_control_mpc_use_) = angle;
+    state_(5 + 2*combined_control_mpc_use_) = angular_velocity;
 
     // reset state_covariance_
     state_covariance_ = initial_state_covariance_.asDiagonal();
@@ -76,10 +88,10 @@ class KFDisturbanceObserver
 
  private:
 
-  typedef Eigen::Matrix<double, kStateSizeKalman, 1> StateVector;
   ros::NodeHandle nh_, private_nh_;
 
-  StateVector state_; // [x1, dx1, x3, dx3, theta, dtheta, dist_theta] -> F is [7,7]
+  typedef Eigen::Matrix<double, kStateSizeKalman, 1> StateVector;
+  StateVector state_;
   Eigen::Matrix<double, kMeasurementSizeKalman, 1> measurements_;  // [x1, dx1, x3, dx3, theta, dtheta]
   Eigen::Matrix<double, kStateSizeKalman, kStateSizeKalman> state_covariance_; // P0 matrix
   Eigen::Matrix<double, kStateSizeKalman, 1> initial_state_covariance_; // P0 values
@@ -87,7 +99,7 @@ class KFDisturbanceObserver
   Eigen::Matrix<double, kMeasurementSizeKalman, kMeasurementSizeKalman> measurement_covariance_; // We express it as diag() later.
 
   // Kalman filter matrices of states
-  //Eigen::SparseMatrix<double> F_; // System dynamics matrix.
+  //Eigen::SparseMatrix<double> F_; // System dynamics matrix. // maybe speeds up the process if needed
   Eigen::Matrix<double, kStateSizeKalman, kStateSizeKalman> F_; // System dynamics matrix.
   Eigen::Matrix<double, kStateSizeKalman, kMeasurementSizeKalman> K_; // Kalman gain matrix.
   Eigen::Matrix<double, kMeasurementSizeKalman, kStateSizeKalman> H_; // Measurement matrix.
@@ -103,10 +115,10 @@ class KFDisturbanceObserver
 
   void calculateKalmanMatrices(Eigen::Matrix<double, kStateSizeKalman, kStateSizeKalman>* F_,
                                Eigen::Matrix<double, kStateSizeKalman, kInputSize>* G_,
-                               Eigen::Matrix<double, kMeasurementSizeKalman, kStateSizeKalman> *H_);
+                               Eigen::Matrix<double, kMeasurementSizeKalman, kStateSizeKalman>* H_);
 
   void simulateSystem();
-  Eigen::Vector2d command_moving_masses_;
+  Eigen::Matrix<double, kInputSize, 1> command_vector_;
   bool initialized_;
 
 };

@@ -56,14 +56,14 @@ class HeightControl:
         #########################################################
         #########################################################
         # Add parameters for z controller
-        self.pid_z.set_kp(0.5)
-        self.pid_z.set_ki(0.01)
+        self.pid_z.set_kp(4.0) # 0.5
+        self.pid_z.set_ki(0.02) # 0.01
         self.pid_z.set_kd(0.75)
 
         # Add parameters for vz controller
-        self.pid_vz.set_kp(20)#87.2)
-        self.pid_vz.set_ki(0.1)
-        self.pid_vz.set_kd(10)#10.89)
+        self.pid_vz.set_kp(25.0)# 20, 87.2)
+        self.pid_vz.set_ki(0.01) # 0.1
+        self.pid_vz.set_kd(20.0)# 10, 10.89)
 
         # Yaw rate params
         self.pid_yaw_rate.set_kp(75)

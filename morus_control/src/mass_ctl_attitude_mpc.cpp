@@ -20,14 +20,6 @@ namespace mav_control_attitude {
               verbose_(false),
               sampling_time_(0.01),
               prediction_sampling_time_(0.01)
-              // CC_MPC
-              /*
-              q_moving_masses_(1, 1, 1, 1),
-              q_IC_motors_(1, 1),
-              q_attitude_(1, 1),
-              r_command_(1, 1, 1, 1),
-              r_delta_command_(1, 1, 1, 1)
-              */
     {
      initializeParameters(); // init the system and its parameters
 
@@ -73,7 +65,7 @@ namespace mav_control_attitude {
         Iyy_b_ = 5.5268;
         Iyy_ = Iyy_b_ + 2*mass_*pow(lm_/2, 2);
 
-        Tgm_ = 0.2;
+        Tgm_ = 0.25;
         w_gm_n_ = 7000 / 60 * 2*M_PI;
         F_n_ = 25 * kGravity;
         b_gm_f_ = F_n_ / (pow(w_gm_n_,2));
@@ -101,65 +93,64 @@ namespace mav_control_attitude {
         Eigen::MatrixXd Bd_continous_time(kStateSize, kDisturbanceSize);
         Bd_continous_time = Eigen::MatrixXd::Zero(kStateSize, kDisturbanceSize);
 
-        // CC_MPC
-        /*
-        // states: (x)
-        // [x1, dx1, x3, dx3, F1, F3, theta, dtheta] -> A is [8,8]
-        // input signals: (u)
-        // ['x1_ref (m)'; 'x3_ref (m)'; 'd_omega1 (rad/s)'; 'd_omega3 (rad/s)'] -> B is [8,4]
-        A_continous_time(0,1) = 1.0;
-        A_continous_time(1,0) = -pow(w_mm_,2);
-        A_continous_time(1,1) = -2.0*zeta_mm_*w_mm_;
-        A_continous_time(2,3) = 1.0;
-        A_continous_time(3,2) = -pow(w_mm_,2);
-        A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
-        A_continous_time(4,4) = -1.0/Tgm_;
-        A_continous_time(5,5) = -1.0/Tgm_;
-        A_continous_time(6,7) = 1.0;
-        A_continous_time(7,0) = mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(7,1) = 2.0 *mass_*(1.0-mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
-        A_continous_time(7,2) = mass_ / Iyy_ * (kGravity + ((1.0-mi_)*zm_*pow(w_mm_,2)));
-        A_continous_time(7,3) = 2.0 *mass_*(1.0-mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
-        A_continous_time(7,4) = 0.92 / (0.92 * Iyy_);
-        A_continous_time(7,5) = -0.92 / (0.92 * Iyy_);
+        if (combined_control_mpc_use_){
+          // CC_MPC //
+          // states: (x)
+          // [x1, dx1, x3, dx3, omega1, omega3, theta, dtheta] -> A is [8,8]
+          // input signals: (u)
+          // ['x1_ref (m)'; 'x3_ref (m)'; 'd_omega1 (rad/s)'; 'd_omega3 (rad/s)'] -> B is [8,4]
+          A_continous_time(0,1) = 1.0;
+          A_continous_time(1,0) = -pow(w_mm_,2);
+          A_continous_time(1,1) = -2.0*zeta_mm_*w_mm_;
+          A_continous_time(2,3) = 1.0;
+          A_continous_time(3,2) = -pow(w_mm_,2);
+          A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
+          A_continous_time(4,4) = -1.0/Tgm_;
+          A_continous_time(5,5) = -1.0/Tgm_;
+          A_continous_time(6,7) = 1.0;
+          A_continous_time(7,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
+          A_continous_time(7,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+          A_continous_time(7,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));
+          A_continous_time(7,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;
+          A_continous_time(7,4) =  2 * b_gm_f_ * w_gm_0_ * lm_ / Iyy_;
+          A_continous_time(7,5) = -2 * b_gm_f_ * w_gm_0_ * lm_ / Iyy_;
 
-        B_continous_time(1,0) = pow(w_mm_,2);
-        B_continous_time(3,1) = pow(w_mm_,2);
-        B_continous_time(4,2) =  2.0 * b_gm_f_ * w_gm_0_ / Tgm_;
-        B_continous_time(5,3) =  2.0 * b_gm_f_ * w_gm_0_ / Tgm_;
-        B_continous_time(7,0) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        B_continous_time(7,1) = -mass_ * (1.0-mi_)*zm_*pow(w_mm_,2) / Iyy_;
+          B_continous_time(1,0) = pow(w_mm_,2);
+          B_continous_time(3,1) = pow(w_mm_,2);
+          B_continous_time(4,2) = 1.0 / Tgm_;
+          B_continous_time(5,3) = 1.0 / Tgm_;
+          B_continous_time(7,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
+          B_continous_time(7,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
-        // disturbance on angle and angular speed [theta, dtheta]
-        Bd_continous_time(6, 0) = 1.0;
-        Bd_continous_time(7, 1) = 1.0;
-         */
+          // disturbance on every state -> B_d is [8,8]
+          Bd_continous_time.setIdentity();
 
-        // MM_MPC //
-        // states: (x)
-        // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
-        // input signals: (u)
-        // [x1_ref (m), x3_ref (m)] -> B is [6,2]
-        A_continous_time(0,1) = 1.0;
-        A_continous_time(1,0) = -pow(w_mm_,2);
-        A_continous_time(1,1) = -2.0*zeta_mm_*w_mm_;
-        A_continous_time(2,3) = 1.0;
-        A_continous_time(3,2) = -pow(w_mm_,2);
-        A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
-        A_continous_time(4,5) = 1.0;
-        A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
-        A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
-        A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
-        A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
+        } else{
+          // MM_MPC //
+          // states: (x)
+          // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
+          // input signals: (u)
+          // [x1_ref (m), x3_ref (m)] -> B is [6,2]
+          A_continous_time(0,1) = 1.0;
+          A_continous_time(1,0) = -pow(w_mm_,2);
+          A_continous_time(1,1) = -2.0*zeta_mm_*w_mm_;
+          A_continous_time(2,3) = 1.0;
+          A_continous_time(3,2) = -pow(w_mm_,2);
+          A_continous_time(3,3) = -2.0*zeta_mm_*w_mm_;
+          A_continous_time(4,5) = 1.0;
+          A_continous_time(5,0) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
+          A_continous_time(5,1) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
+          A_continous_time(5,2) = mass_ / Iyy_ * (kGravity + ((1.0-4.0*mi_)*zm_*pow(w_mm_,2)));      // dtheta =f(x1)
+          A_continous_time(5,3) = 2.0 * mass_*(1.0-4.0*mi_)*zm_*zeta_mm_*w_mm_/Iyy_;                 // dtheta =f(v1)
 
-        B_continous_time(1,0) = pow(w_mm_,2);
-        B_continous_time(3,1) = pow(w_mm_,2);
-        B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
-        B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
+          B_continous_time(1,0) = pow(w_mm_,2);
+          B_continous_time(3,1) = pow(w_mm_,2);
+          B_continous_time(5,0) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
+          B_continous_time(5,1) = -mass_ * (1.0-4.0*mi_)*zm_*pow(w_mm_,2) / Iyy_;
 
-        // disturbance on every state, at least some -> B_d is [6,6]
-        // introduces Moment of disturbance to be estimated
-        Bd_continous_time.setIdentity();
+          // disturbance on every state -> B_d is [6,6]
+          Bd_continous_time.setIdentity();
+        }
 
         // discretization of matrix A
         model_A_ = (prediction_sampling_time_ * A_continous_time).exp();
@@ -168,7 +159,7 @@ namespace mav_control_attitude {
         // "Model predictive control for Trajectory Tracking of Unmanned Aerial Vehicles Using Robot Operating System"
         Eigen::MatrixXd integral_exp_A;
         integral_exp_A = Eigen::MatrixXd::Zero(kStateSize, kStateSize);
-        const int count_integral_A = 1000; // TODO see why that size
+        const int count_integral_A = 100; // TODO see why that size, maybe aproximation of integration
 
         // discrete integration
         for (int i = 0; i < count_integral_A; i++) {
@@ -220,32 +211,28 @@ namespace mav_control_attitude {
       R.setZero();
       R_delta.setZero();
 
-      /*
-      // CC_MPC
-      // fill the cost matrices - Q
-      Q.block(0, 0, 4, 4) = q_moving_masses_.asDiagonal();
-      Q.block(4, 4, 2, 2) = q_IC_motors_.asDiagonal();
-      Q.block(6, 6, 2, 2) = q_attitude_.asDiagonal();
+      if (combined_control_mpc_use_){
+        // CC_MPC
+        // fill the cost matrices - Q
+        Q.block(0, 0, 4, 4) = q_moving_masses_.asDiagonal();
+        Q.block(4, 4, 2, 2) = q_rotors_.asDiagonal();
+        Q.block(6, 6, 2, 2) = q_attitude_.asDiagonal();
+
+      } else {
+        // MM_MPC
+        // fill the cost matrices - Q
+        Q.block(0, 0, 4, 4) = q_moving_masses_.asDiagonal();
+        Q.block(4, 4, 2, 2) = q_attitude_.asDiagonal();
+      }
 
       // fill the cost matrices - R
       R = r_command_.asDiagonal();
 
       // fill the cost matrices - R_delta
       R_delta = r_delta_command_.asDiagonal();
-      */
 
-      // MM_MPC
-      // fill the cost matrices - Q
-      Q.block(0, 0, 4, 4) = q_moving_masses_.asDiagonal();
-      Q.block(4, 4, 2, 2) = q_attitude_.asDiagonal();
-
-      // fill the cost matrices - R
-      R = r_command_.asDiagonal();
       steady_state_calculation_.setRCommand(r_command_);
       steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
-
-      // fill the cost matrices - R_delta
-      R_delta = r_delta_command_.asDiagonal();
 
       //Compute terminal cost - Riccaty equation
       //Q_final(k+1) = Q + A'*Q_final(k)*A - (A'*Q_final(k)*B)*inv(B'*Q_final(k)*B+R)*(B'*Q_final(k)*A);
@@ -268,11 +255,39 @@ namespace mav_control_attitude {
       Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.R_delta), kInputSize, kInputSize) = R_delta;
 
       // constraints for CVXGEN solver set
+      // state constraints
+      // MM
+      /*
+      params_.x_max[0] = lm_/2 - 0.01;    // x1
+      params_.x_max[1] = 2;               // dx1
+      params_.x_max[2] = lm_/2 - 0.01;    // x3
+      params_.x_max[3] = 2;               // dx3
+      params_.x_max[4] = 1.0;             // theta
+      params_.x_max[5] = 40;              // dtheta
+
+      params_.x_min[0] = -params_.x_max[0];
+      params_.x_min[1] = -params_.x_max[1];
+      params_.x_min[2] = -params_.x_max[2];
+      params_.x_min[3] = -params_.x_max[3];
+      params_.x_min[4] = -params_.x_max[4];
+      params_.x_min[5] = -params_.x_max[5];
+      */
+
+      // input constraints
+      // MM
       params_.u_max[0] = lm_/2 - 0.01;
       params_.u_max[1] = lm_/2 - 0.01;
 
       params_.u_min[0] = -params_.u_max[0];
       params_.u_min[1] = -params_.u_max[1];
+
+      if (combined_control_mpc_use_){
+        params_.u_max[2] = 20;
+        params_.u_max[3] = 20;
+        params_.u_min[2] = -params_.u_max[2];
+        params_.u_min[3] = -params_.u_max[3];
+      }
+
 
       ROS_INFO("Linear MPC: Tuning parameters updated...");
       if (verbose_) {
@@ -301,6 +316,7 @@ namespace mav_control_attitude {
       if (!initialized_observer_){
         disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
+                                              motor_0_speed_, motor_1_speed_,
                                               angle_, angular_velocity_);
         disturbance_observer_.setSystemMatrices(model_A_, model_B_, model_Bd_);
         initialized_observer_ = true;
@@ -308,15 +324,17 @@ namespace mav_control_attitude {
 
       disturbance_observer_.setMeasuredStates(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
+                                              motor_0_speed_, motor_1_speed_,
                                               angle_, angular_velocity_);
       disturbance_observer_.setMovingMassCommand(control_commands_temp_);
 
       bool observer_update_successful = disturbance_observer_.updateEstimator();
 
       if (!observer_update_successful){
-        // reset observer
+        // reset observer and its states
         disturbance_observer_.setInitialState(movable_mass_0_position_, movable_mass_0_speed_,
                                               movable_mass_1_position_, movable_mass_1_speed_,
+                                              motor_0_speed_, motor_1_speed_,
                                               angle_, angular_velocity_);
       }
 
@@ -352,7 +370,7 @@ namespace mav_control_attitude {
 
         Eigen::Matrix<double, kDisturbanceSize, kMeasurementSize> K_I_MPC;
         K_I_MPC.Zero();
-        K_I_MPC(4) = K_I_MPC_angle_; // set by dynamic reconfigure
+        K_I_MPC(4 + 2*combined_control_mpc_use_) = K_I_MPC_angle_; // set by dynamic reconfigure
         estimated_disturbances_ -= K_I_MPC * angle_error_integration_;
       };
 
@@ -361,14 +379,18 @@ namespace mav_control_attitude {
 
       // creating the "target_state" and "current_state" variables
       target_state.setZero();
-      target_state(4,0) = angle_sp_;
+      target_state(4 + 2*combined_control_mpc_use_,0) = angle_sp_;
 
       current_state(0) = movable_mass_0_position_;
       current_state(1) = movable_mass_0_speed_;
       current_state(2) = movable_mass_1_position_;
       current_state(3) = movable_mass_1_speed_;
-      current_state(4) = angle_;
-      current_state(5) = angular_velocity_;
+      if (combined_control_mpc_use_) {
+        current_state(4) = motor_0_speed_;
+        current_state(5) = motor_1_speed_;
+      }
+      current_state(4 + 2*combined_control_mpc_use_) = angle_;
+      current_state(5 + 2*combined_control_mpc_use_) = angular_velocity_;
 
       Eigen::VectorXd ref(kMeasurementSize);
       ref << angle_sp_;
@@ -412,7 +434,7 @@ namespace mav_control_attitude {
       for (int i = 1; i < kPredictionHorizonSteps; i++) {
         Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params_.x_ss[i])) = target_state;
       }
-      Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_ss))   = target_input;
+      Eigen::Map<Eigen::Matrix<double, kInputSize, 1>>(const_cast<double*>(params_.u_ss)) = target_input;
       Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0))    = current_state;
       Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  ))    = estimated_disturbances_;
       Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = control_commands_temp_;
@@ -430,13 +452,19 @@ namespace mav_control_attitude {
 
       control_commands_temp_.setZero(); // reset the msg for input signals
       if (solver_status_ >= 0){ // solution found
-        control_commands_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
+        if (combined_control_mpc_use_) {
+          // CC_MPC has 4 input variables
+          control_commands_temp_ << vars.u_0[0], vars.u_0[1], vars.u_0[2], vars.u_0[3];
+        } else {
+          // MM_MPC has 2 input variables
+          control_commands_temp_ << vars.u_0[0], vars.u_0[1]; // fill the solution for problem
+        }
       }
       else { // solution not found -> LQR working
         ROS_WARN("Linear MPC: Solver failed, use LQR backup");
         Eigen::Matrix<double, kInputSize, 1> K_I;
-        K_I(0) = 1.5; // TODO magic number to look at, integrator constant
-        K_I(1) = 1.5;
+        K_I.setOnes();
+        K_I *= 1.5; // TODO magic number to look at, integrator constant
 
         // CALCULATING FEEDBACK WITH LQR !!!!!!
         error_states = target_state - current_state;
@@ -445,12 +473,20 @@ namespace mav_control_attitude {
 
       // command min limits
       Eigen::Matrix<double, kInputSize, 1> lower_limits_roll;
-      lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
+      if (combined_control_mpc_use_) {
+        lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01), -20, -20;
+      } else {
+        lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
+      }
       control_commands_temp_ = control_commands_temp_.cwiseMax(lower_limits_roll);
 
       // command max limits
-      Eigen::Vector2d upper_limits_roll;
-      upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
+      Eigen::Matrix<double, kInputSize, 1> upper_limits_roll;
+      if (combined_control_mpc_use_) {
+        upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01), 20, 20;
+      } else {
+        upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
+      }
       control_commands_temp_ = control_commands_temp_.cwiseMin(upper_limits_roll);
       *control_commands = control_commands_temp_;
     }

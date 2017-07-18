@@ -26,24 +26,17 @@
 #include <morus_control/solver.h>
 
 namespace mav_control_attitude {
-    // constants
-    // CC_MPC
-    /*
-    constexpr int kStateSize = 8;
-    constexpr int kInputSize = 4;
-    constexpr int kMeasurementSize = 1;
-    constexpr int kDisturbanceSize = 2;
-    */
 
-    // MM_MPC
-    constexpr int kStateSize = 6;       // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
-    constexpr int kInputSize = 2;       // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
-    constexpr int kMeasurementSize = 1; // [theta] -> C is [1,6]
-    constexpr int kDisturbanceSize = 6; // [x1, dx1, x3, dx3, theta, dtheta] -> B_d is [6,6]
+    constexpr int combined_control_mpc_use_ = 0;  // still working with moving masses
+
+    // MM_MPC + added variables for CC_MPC
+    constexpr int kStateSize = 6 + 2*combined_control_mpc_use_; // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
+    constexpr int kInputSize = 2 + 2*combined_control_mpc_use_; // [x1_ref (m), x3_ref (m)]          -> B is [6,2]
+    constexpr int kMeasurementSize = 1;                        // [theta] -> C is [1,6]
+    constexpr int kDisturbanceSize = kStateSize;               // disturbances are looked on all states -> B_d is [6,6]
 
     constexpr int kPredictionHorizonSteps = 20;
     constexpr double kGravity = 9.80665;
-
 
 class MPCAttitudeController {
  public:
@@ -218,30 +211,14 @@ class MPCAttitudeController {
     // steady state calculation
     SteadyStateCalculation steady_state_calculation_;
 
-    // controller parameters
-      // CC_MPC
-      /*
-      // state penalty
-      Eigen::Vector3d q_position_;
-      Eigen::Vector3d q_velocity_;
+    // state penalty
+    Eigen::Vector4d q_moving_masses_;
+    Eigen::Vector2d q_rotors_;
+    Eigen::Vector2d q_attitude_;
 
-      Eigen::Vector4d q_moving_masses_;
-      Eigen::Vector2d q_IC_motors_;
-      Eigen::Vector2d q_attitude_;
-
-      // control penalty
-      Eigen::Vector4d r_command_; // u
-      Eigen::Vector4d r_delta_command_; // du
-      */
-
-      // MM_MPC
-      // state penalty
-      Eigen::Vector4d q_moving_masses_;
-      Eigen::Vector2d q_attitude_;
-
-      // control penalty
-      Eigen::Vector2d r_command_;
-      Eigen::Vector2d r_delta_command_;
+    // control penalty
+    Eigen::Matrix<double, kInputSize, 1> r_command_;
+    Eigen::Matrix<double, kInputSize, 1> r_delta_command_;
 
     // debug info
     bool verbose_;
