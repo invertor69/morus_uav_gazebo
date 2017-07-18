@@ -85,6 +85,7 @@ class MPCAttitudeController {
         motor_msg.data.clear();
         motor_msg.data.push_back(motor_0_speed_);
         motor_msg.data.push_back(motor_1_speed_);
+        // debugging to see the rotor behaviour
         rotor_velocities_linearizes_pub_.publish(motor_msg);
       }
     }

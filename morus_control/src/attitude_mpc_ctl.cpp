@@ -65,7 +65,7 @@ namespace mav_control_attitude {
         Iyy_b_ = 5.5268;
         Iyy_ = Iyy_b_ + 2*mass_*pow(lm_/2, 2);
 
-        Tgm_ = 0.25;
+        Tgm_ = 0.2;
         w_gm_n_ = 7000 / 60 * 2*M_PI;
         F_n_ = 25 * kGravity;
         b_gm_f_ = F_n_ / (pow(w_gm_n_,2));

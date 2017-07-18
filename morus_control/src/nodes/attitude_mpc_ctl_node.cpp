@@ -13,7 +13,7 @@ namespace mav_control_attitude {
               automatic_reference_(false),
               verbose_(false)
     {
-        // init the readings od moving mass sensors
+        // init the readings od moving mass and rotor sensors
         movable_mass_0_position_ = 0.0;
         movable_mass_1_position_ = 0.0;
         movable_mass_2_position_ = 0.0;
@@ -22,6 +22,10 @@ namespace mav_control_attitude {
         movable_mass_1_speed_ = 0.0;
         movable_mass_2_speed_ = 0.0;
         movable_mass_3_speed_ = 0.0;
+        motor_0_speed_ = 0.0;
+        motor_1_speed_ = 0.0;
+        motor_2_speed_ = 0.0;
+        motor_3_speed_ = 0.0;
 
         euler_sp_.x = 0.0;
         euler_sp_.y = 0.0;
