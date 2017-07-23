@@ -15,7 +15,7 @@ namespace mav_control_attitude {
 class KFDisturbanceObserver
 {
  private:
-  static constexpr int combined_control_mpc_use_ = 0;  // still working with moving masses
+  static constexpr int combined_control_mpc_use_ = 1;  // still working with moving masses
 
   static constexpr int kStateSize = 6 + 2*combined_control_mpc_use_;
   static constexpr int kInputSize = 2 + 2*combined_control_mpc_use_;

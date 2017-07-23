@@ -18,8 +18,8 @@ namespace mav_control_attitude {
               disturbance_observer_(nh, private_nh),
               steady_state_calculation_(nh, private_nh),
               verbose_(false),
-              sampling_time_(0.01),
-              prediction_sampling_time_(0.01)
+              sampling_time_(0.04),
+              prediction_sampling_time_(0.04)
     {
      initializeParameters(); // init the system and its parameters
 
@@ -65,7 +65,7 @@ namespace mav_control_attitude {
         Iyy_b_ = 5.5268;
         Iyy_ = Iyy_b_ + 2*mass_*pow(lm_/2, 2);
 
-        Tgm_ = 0.2;
+        Tgm_ = 0.25;
         w_gm_n_ = 7000 / 60 * 2*M_PI;
         F_n_ = 25 * kGravity;
         b_gm_f_ = F_n_ / (pow(w_gm_n_,2));
@@ -202,8 +202,8 @@ namespace mav_control_attitude {
 
       Eigen::Matrix<double, kStateSize, kStateSize> Q;
       Eigen::Matrix<double, kStateSize, kStateSize> Q_final;
-      Eigen::Matrix<double, kInputSize, kInputSize> R;
-      Eigen::Matrix<double, kInputSize, kInputSize> R_delta;
+      Eigen::MatrixXd R;
+      Eigen::MatrixXd R_delta;
 
       // init the cost matrices
       Q.setZero();
@@ -218,18 +218,30 @@ namespace mav_control_attitude {
         Q.block(4, 4, 2, 2) = q_rotors_.asDiagonal();
         Q.block(6, 6, 2, 2) = q_attitude_.asDiagonal();
 
+        // fill the cost matrices - R
+        R = r_command_.asDiagonal();
+
+        // fill the cost matrices - R_delta
+        R_delta = r_delta_command_.asDiagonal();
+
       } else {
         // MM_MPC
         // fill the cost matrices - Q
         Q.block(0, 0, 4, 4) = q_moving_masses_.asDiagonal();
         Q.block(4, 4, 2, 2) = q_attitude_.asDiagonal();
+
+        Eigen::Matrix<double, 2, 1> temp_r;
+        // take only the first two for the moving masses
+        temp_r << r_command_(0), r_command_(1);
+        // fill the cost matrices - R
+        R = temp_r.asDiagonal();
+
+        Eigen::Matrix<double, 2, 1> temp_delta_r;
+        // take only the first two for the moving masses
+        temp_delta_r << r_delta_command_(0), r_delta_command_(1);
+        // fill the cost matrices - R_delta
+        R_delta = temp_delta_r.asDiagonal();
       }
-
-      // fill the cost matrices - R
-      R = r_command_.asDiagonal();
-
-      // fill the cost matrices - R_delta
-      R_delta = r_delta_command_.asDiagonal();
 
       steady_state_calculation_.setRCommand(r_command_);
       steady_state_calculation_.initialize(model_A_, model_B_, model_Bd_);
@@ -255,7 +267,7 @@ namespace mav_control_attitude {
       Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params_.R_delta), kInputSize, kInputSize) = R_delta;
 
       // constraints for CVXGEN solver set
-      // state constraints
+      // state constraints TODO how to make work
       // MM
       /*
       params_.x_max[0] = lm_/2 - 0.01;    // x1
@@ -274,18 +286,26 @@ namespace mav_control_attitude {
       */
 
       // input constraints
-      // MM
       params_.u_max[0] = lm_/2 - 0.01;
       params_.u_max[1] = lm_/2 - 0.01;
-
       params_.u_min[0] = -params_.u_max[0];
       params_.u_min[1] = -params_.u_max[1];
 
+      params_.du_max[0] = sampling_time_ * 2; // constraint of 2 m/s
+      params_.du_max[1] = sampling_time_ * 2;
+      params_.du_min[0] = -params_.du_max[0];
+      params_.du_min[1] = -params_.du_max[1];
+
       if (combined_control_mpc_use_){
-        params_.u_max[2] = 20;
-        params_.u_max[3] = 20;
+        params_.u_max[2] = 50;
+        params_.u_max[3] = 50;
         params_.u_min[2] = -params_.u_max[2];
         params_.u_min[3] = -params_.u_max[3];
+
+        params_.du_max[2] = 1;
+        params_.du_max[3] = 1;
+        params_.du_min[2] = -params_.du_max[2];
+        params_.du_min[3] = -params_.du_max[3];
       }
 
 
@@ -431,10 +451,13 @@ namespace mav_control_attitude {
       }
 
       // fill in the structure for CVXGEN solver - x_ss[t], u_ss, x_0, d, u_prev
-      for (int i = 1; i < kPredictionHorizonSteps; i++) {
+      for (int i = 1; i < 11; i++) {
         Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params_.x_ss[i])) = target_state;
       }
-      Eigen::Map<Eigen::Matrix<double, kInputSize, 1>>(const_cast<double*>(params_.u_ss)) = target_input;
+      for (int i = 0; i < 10; i++) {
+        Eigen::Map<Eigen::Matrix<double, kInputSize, 1>>(const_cast<double*>(params_.u_ss[i])) = target_input;
+      }
+
       Eigen::Map<Eigen::Matrix<double, kStateSize,       1>>(const_cast<double*>(params_.x_0))    = current_state;
       Eigen::Map<Eigen::Matrix<double, kDisturbanceSize, 1>>(const_cast<double*>(params_.d  ))    = estimated_disturbances_;
       Eigen::Map<Eigen::Matrix<double, kInputSize,       1>>(const_cast<double*>(params_.u_prev)) = control_commands_temp_;
@@ -444,7 +467,7 @@ namespace mav_control_attitude {
       params = params_;
 
       // solve the problem quadratic problem
-      solver_status_ = solve();
+      solver_status_ = (int) solve();
       // publish the solver status
       std_msgs::Int64 solver_status_msg;
       solver_status_msg.data = solver_status_;
@@ -468,13 +491,13 @@ namespace mav_control_attitude {
 
         // CALCULATING FEEDBACK WITH LQR !!!!!!
         error_states = target_state - current_state;
-        control_commands_temp_ = LQR_K_ * error_states + K_I * angle_error_integration_;
+        control_commands_temp_ = LQR_K_ * error_states; // + K_I * angle_error_integration_;
       }
 
       // command min limits
       Eigen::Matrix<double, kInputSize, 1> lower_limits_roll;
       if (combined_control_mpc_use_) {
-        lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01), -20, -20;
+        lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01), -50, -50;
       } else {
         lower_limits_roll << -(lm_/2.0 - 0.01), -(lm_/2.0 - 0.01);
       }
@@ -483,7 +506,7 @@ namespace mav_control_attitude {
       // command max limits
       Eigen::Matrix<double, kInputSize, 1> upper_limits_roll;
       if (combined_control_mpc_use_) {
-        upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01), 20, 20;
+        upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01), 50, 50;
       } else {
         upper_limits_roll << (lm_/2.0 - 0.01), (lm_/2.0 - 0.01);
       }

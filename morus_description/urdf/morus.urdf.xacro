@@ -29,8 +29,8 @@
 
   <!-- Value changed not to have masses getting diverse -->
   <!-- Enable the drag coefficient -->
-  <!-- xacro:property name="rotor_drag_coefficient" value="8.06428e-04" -->
-  <xacro:property name="rotor_drag_coefficient" value="0.0" />
+  <xacro:property name="rotor_drag_coefficient" value="8.06428e-04" />
+  <!-- xacro:property name="rotor_drag_coefficient" value="0.0" -->
   <xacro:property name="rolling_moment_coefficient" value="0.00001" />
 
   <xacro:property name="movable_mass_mass" value="1" />

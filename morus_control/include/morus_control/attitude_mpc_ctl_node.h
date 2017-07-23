@@ -51,6 +51,7 @@ namespace mav_control_attitude {
         ros::Publisher pub_mass2_;
         ros::Publisher pub_mass3_;
         ros::Publisher pub_rotors_;
+        ros::Publisher pub_rotors_attitude_;
         // debugging publisher
         ros::Publisher pub_angle_state_;
 

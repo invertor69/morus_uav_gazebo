@@ -23,6 +23,37 @@ After the desired values are set, run:
 ```
 to start the simulation.
 
+## Saving plots
+There is a save file called _process_bag.sh_, position in the required directory and call
+```sh
+  $ ./process_bag.sh "name_of_the_directory_to_save"
+```
+
+inside the .sh script define the topics wanted to save and plot later in Matlab or desired software
+
+## Changing the optimization problem
+The file in the "morus_control/include/morus_control/solve.h" needs to be changed with the newer version generated from CVXGEN software
+https://cvxgen.com/docs/index.html
+to support c++ compiler with the code at the beggining:
+```sh
+ #define SOLVER_H
+
+ // enable the C++ compiler to compile C code
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+
+ /* Uncomment the next line to remove all library dependencies. */
+```
+and at the end:
+```sh
+// enable the C++ compiler to compile C code
+#ifdef __cplusplus
+}
+#endif
+```
+After that change the begginings of files _ldl.c_, _matrix_support.c_, _solver.c_ and _util.c_ to include the right solver header
+
 ## Troubleshooting
 If the _gazebo_gui_ fails to launch, run in another terminal:
 ```sh

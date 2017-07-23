@@ -41,7 +41,7 @@ namespace mav_control_attitude {
 class SteadyStateCalculation
 {
  public:
-  static constexpr int combined_control_mpc_use_ = 0;
+  static constexpr int combined_control_mpc_use_ = 1;
 
   static constexpr int kStateSize = 6 + 2*combined_control_mpc_use_; // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
   static constexpr int kInputSize = 2 + 2*combined_control_mpc_use_; // [x1_ref (m), x3_ref (m)]          -> B is [6,2]

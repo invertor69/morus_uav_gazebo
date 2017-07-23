@@ -27,7 +27,7 @@
 
 namespace mav_control_attitude {
 
-    constexpr int combined_control_mpc_use_ = 0;  // still working with moving masses
+    constexpr int combined_control_mpc_use_ = 1;  // still working with moving masses
 
     // MM_MPC + added variables for CC_MPC
     constexpr int kStateSize = 6 + 2*combined_control_mpc_use_; // [x1, dx1, x3, dx3, theta, dtheta] -> A is [6,6]
@@ -95,6 +95,11 @@ class MPCAttitudeController {
       angle_ = angle;
     }
 
+    void setAngularVelocityState(double angular_velocity)
+    {
+    angular_velocity_ = angular_velocity;
+  }
+
     void setIntegratorConstantMPC(double K_I_MPC_angle)
     {
       K_I_MPC_angle_ = K_I_MPC_angle;
@@ -105,24 +110,24 @@ class MPCAttitudeController {
       q_moving_masses_ << q_p0, q_v0, q_p1, q_v1;
     }
 
+    void setPenaltyRotors(double q_omega_0, double q_omega_1)
+    {
+      q_rotors_ << q_omega_0, q_omega_1;
+    }
+
     void setPenaltyAttitude(double q_theta, double q_omega)
     {
       q_attitude_ << q_theta, q_omega;
     }
 
-    void setPenaltyCommand(double r_0, double r_1)
+    void setPenaltyCommand(double r_0, double r_1, double r_2, double r_3)
     {
-      r_command_ << r_0, r_1;
+      r_command_ << r_0, r_1, r_2, r_3;
     }
 
-    void setPenaltyChangeCommand(double r_delta_0, double r_delta_1)
+    void setPenaltyChangeCommand(double r_delta_0, double r_delta_1, double r_delta_2, double r_delta_3)
     {
-    r_delta_command_ << r_delta_0, r_delta_1;
-    }
-
-    void setAngularVelocityState(double angular_velocity)
-    {
-      angular_velocity_ = angular_velocity;
+      r_delta_command_ << r_delta_0, r_delta_1, r_delta_2, r_delta_3;
     }
 
     void setControllerName(std::string controller_name)
@@ -162,8 +167,8 @@ class MPCAttitudeController {
     double movable_mass_0_speed_;
     double movable_mass_1_position_;
     double movable_mass_1_speed_;
-    double motor_0_speed_;
-    double motor_1_speed_;
+    double motor_0_speed_; // speed of the rotor which increases the angle regulated
+    double motor_1_speed_; // speed of the rotor which decreases the angle regulated
     double angle_;
     double angular_velocity_;
 

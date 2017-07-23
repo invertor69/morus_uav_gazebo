@@ -153,7 +153,7 @@ class HeightControl:
 	      if self.gm_attitude_ctl == 0:
 		  # moving masses are used to control attitude
 		  # Publish motor velocities
-		  mot_speed_msg = Actuators()
+		  mot_speed_msg = Actuators(); mot_speed_msg.header.stamp = t
 		  mot_speed1 = self.mot_speed + self.dwz
 		  mot_speed2 = self.mot_speed - self.dwz
 		  mot_speed3 = self.mot_speed + self.dwz

@@ -37,6 +37,9 @@ namespace mav_control_attitude {
         linear_mpc_pitch_.applyParameters();
         linear_mpc_pitch_.setControllerName("Pitch controller");
 
+        pitch_commands_.setZero();
+        roll_commands_.setZero();
+
         // dynamic reconfigure server
         dynamic_reconfigure::Server<morus_control::MPCAttitudeControllerConfig>::CallbackType f;
         f = boost::bind(&MPCAttitudeControllerNode::DynConfigCallback, this, _1, _2);
@@ -49,6 +52,7 @@ namespace mav_control_attitude {
         pub_mass3_ = nh_.advertise<std_msgs::Float64>("movable_mass_3_position_controller/command", 1);
         pub_angle_state_ = nh_.advertise<morus_msgs::AngleAndAngularVelocity>("angles", 1);
         pub_rotors_ = nh_.advertise<mav_msgs::Actuators>("/gazebo/command/motor_speed", 1);
+        pub_rotors_attitude_ = nh_.advertise<mav_msgs::Actuators>("command/attitude/motor_speed", 1);
 
         // Subscribers ( nh <- )
         imu_subscriber_ = nh_.subscribe("imu", 1, &MPCAttitudeControllerNode::AhrsCallback, this); // measured values info
@@ -84,24 +88,29 @@ namespace mav_control_attitude {
         automatic_reference_ = config.aut_ref;
 
         // integral component init
-        linear_mpc_roll_.setIntegratorConstantMPC(config.K_I_MPC);
+        linear_mpc_roll_.setIntegratorConstantMPC( config.K_I_MPC);
         linear_mpc_pitch_.setIntegratorConstantMPC(config.K_I_MPC);
 
         // q_moving_masses setup
-        linear_mpc_roll_.setPenaltyMovingMasses(config.q_p0, config.q_v0, config.q_p1, config.q_v1);
+        linear_mpc_roll_.setPenaltyMovingMasses( config.q_p0, config.q_v0, config.q_p1, config.q_v1);
         linear_mpc_pitch_.setPenaltyMovingMasses(config.q_p0, config.q_v0, config.q_p1, config.q_v1);
 
+        linear_mpc_roll_.setPenaltyRotors( config.q_rotor_speed_0, config.q_rotor_speed_1);
+        linear_mpc_pitch_.setPenaltyRotors(config.q_rotor_speed_0, config.q_rotor_speed_1);
+
         // q_attitude setup
-        linear_mpc_roll_.setPenaltyAttitude(config.q_angle, config.q_angular_velocity);
+        linear_mpc_roll_.setPenaltyAttitude( config.q_angle, config.q_angular_velocity);
         linear_mpc_pitch_.setPenaltyAttitude(config.q_angle, config.q_angular_velocity);
 
         // r_command setup
-        linear_mpc_roll_.setPenaltyCommand(config.r_mass_0, config.r_mass_1);
-        linear_mpc_pitch_.setPenaltyCommand(config.r_mass_0, config.r_mass_1);
+        linear_mpc_roll_.setPenaltyCommand( config.r_mass_0, config.r_mass_1,config.r_rotor_0, config.r_rotor_1);
+        linear_mpc_pitch_.setPenaltyCommand(config.r_mass_0, config.r_mass_1,config.r_rotor_0, config.r_rotor_1);
 
         // r_delta_command setup
-        linear_mpc_roll_.setPenaltyChangeCommand(config.r_delta_mass_0, config.r_delta_mass_1);
-        linear_mpc_pitch_.setPenaltyChangeCommand(config.r_delta_mass_0, config.r_delta_mass_1);
+        linear_mpc_roll_.setPenaltyChangeCommand( config.r_delta_mass_0, config.r_delta_mass_1,
+                                                  config.r_delta_rotor_0, config.r_delta_rotor_1);
+        linear_mpc_pitch_.setPenaltyChangeCommand(config.r_delta_mass_0, config.r_delta_mass_1,
+                                                  config.r_delta_rotor_0, config.r_delta_rotor_1);
 
         // change the adequate matrices
         linear_mpc_roll_.applyParameters();
@@ -240,19 +249,28 @@ namespace mav_control_attitude {
     }
 
     void MPCAttitudeControllerNode::MotorSpeedCallback(const mav_msgs::Actuators &msg) {
-      motor_0_speed_ = -msg.angular_velocities.data()[0];
-      motor_1_speed_ =  msg.angular_velocities.data()[1];
-      motor_2_speed_ = -msg.angular_velocities.data()[2];
-      motor_3_speed_ =  msg.angular_velocities.data()[3];
-      linear_mpc_pitch_.setMotorState(motor_0_speed_, motor_2_speed_);
+      motor_0_speed_ = -msg.angular_velocities.data()[0]; // +
+      motor_1_speed_ =  msg.angular_velocities.data()[1]; // +
+      motor_2_speed_ = -msg.angular_velocities.data()[2]; // +
+      motor_3_speed_ =  msg.angular_velocities.data()[3]; // +
+      // all the speeds are now positive
+      // 1. state - rotor which increases regulated angle, 2. state - decreases
+      linear_mpc_pitch_.setMotorState(motor_2_speed_, motor_0_speed_);
       linear_mpc_roll_.setMotorState( motor_1_speed_, motor_3_speed_);
       motor_speed_received_ = true; // acknowledgement of receiving message
     }
 
     void MPCAttitudeControllerNode::MotorSpeedHeightCallback(const mav_msgs::Actuators &msg) {
       // read the command sent from height controller
-      // forward the msg to the height controller
-      pub_rotors_.publish(msg);
+      // forward the msg from the hight controller and to the UAV
+      mav_msgs::Actuators combined_rotor_command_msg;
+      combined_rotor_command_msg.header.stamp = ros::Time::now();
+      combined_rotor_command_msg.angular_velocities.clear();
+      combined_rotor_command_msg.angular_velocities.push_back(msg.angular_velocities[0] + pitch_commands_[2]);
+      combined_rotor_command_msg.angular_velocities.push_back(msg.angular_velocities[1] + roll_commands_[3]);
+      combined_rotor_command_msg.angular_velocities.push_back(msg.angular_velocities[2] + pitch_commands_[3]);
+      combined_rotor_command_msg.angular_velocities.push_back(msg.angular_velocities[3] + roll_commands_[2]);
+      pub_rotors_.publish(combined_rotor_command_msg);
     }
 
     bool MPCAttitudeControllerNode::calculateControlCommand(Eigen::Matrix<double, kInputSize, 1> *control_commands,
@@ -282,24 +300,33 @@ namespace mav_control_attitude {
         assert(roll_commands_.data());
 
         std_msgs::Float64 mass0_command_msg, mass1_command_msg, mass2_command_msg, mass3_command_msg;
-        mass0_command_msg.data =  pitch_commands_(0);
-        mass1_command_msg.data = -roll_commands_(0);
-        mass2_command_msg.data = -pitch_commands_(1);
-        mass3_command_msg.data =  roll_commands_(1);
+        mass0_command_msg.data =  pitch_commands_[0];
+        mass1_command_msg.data = -roll_commands_[0];
+        mass2_command_msg.data = -pitch_commands_[1];
+        mass3_command_msg.data =  roll_commands_[1];
 
         // publish the new references for the masses
         pub_mass0_.publish(mass0_command_msg);
         pub_mass1_.publish(mass1_command_msg);
         pub_mass2_.publish(mass2_command_msg);
         pub_mass3_.publish(mass3_command_msg);
+
+        mav_msgs::Actuators rotor_attitude_command_msg;
+        rotor_attitude_command_msg.header.stamp = ros::Time::now();
+        rotor_attitude_command_msg.angular_velocities.clear();
+        rotor_attitude_command_msg.angular_velocities.push_back(+ pitch_commands_[2]);
+        rotor_attitude_command_msg.angular_velocities.push_back(+ roll_commands_[3]);
+        rotor_attitude_command_msg.angular_velocities.push_back(+ pitch_commands_[3]);
+        rotor_attitude_command_msg.angular_velocities.push_back(+ roll_commands_[2]);
+        pub_rotors_attitude_.publish(rotor_attitude_command_msg);
     }
 
     void MPCAttitudeControllerNode::run() {
 
       // define sampling time
       // needs to be set in the controller as well, change to be unique !!! TODO
-      double sampling_time = 0.01;
-      ros::Rate loop_rate(1.0 / sampling_time); // 10 Hz -> Ts = 0.1 s
+      double sampling_time = 0.04;
+      ros::Rate loop_rate(1.0 / sampling_time); // 25 Hz -> Ts = 0.04 s
 
        while (ros::ok()){
            ros::spinOnce();
